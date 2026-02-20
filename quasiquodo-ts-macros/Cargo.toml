@@ -1,0 +1,15 @@
+[package]
+name = "quasiquodo-ts-macros"
+description = "Proc macro shims for Quasiquodo's TypeScript macros"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[lib]
+proc-macro = true
+
+[dependencies]
+quasiquodo-ts-core.workspace = true
+
+[lints]
+workspace = true
