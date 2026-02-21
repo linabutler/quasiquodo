@@ -9,19 +9,51 @@ use super::{
     impl_lift_for_unit_enum, lift_variants, splice_idents,
 };
 
-impl_lift_for_newtype_enum!(
-    Decl,
-    [
-        Class,
-        Fn,
-        Var,
-        Using,
-        TsInterface,
-        TsTypeAlias,
-        TsEnum,
-        TsModule
-    ]
-);
+/// Custom implementation for `Decl` placeholders.
+///
+/// The preprocessor emits `var __tsq_N__` for `Decl` variables,
+/// because bare identifiers aren't valid in all `Decl` positions.
+/// This implementation detects and substitutes those placeholders
+/// with bound variables. Splices produce bare `Decl` items;
+/// [`Stmt::lift`] wraps them in `Stmt::Decl`.
+impl Lift for Decl {
+    fn lift(&self, context: &Context) -> syn::Result<CodeFragment> {
+        if let Decl::Var(decl) = self
+            && let [
+                VarDeclarator {
+                    name: Pat::Ident(bi),
+                    init: None,
+                    ..
+                },
+            ] = &*decl.decls
+            && let Some(var) = context.placeholder(&bi.id.sym)
+            && matches!(var.ty.inner(), VarType::Decl)
+        {
+            let var_ident = var.to_tokens();
+            return Ok(match &var.ty {
+                VarType::Vec(_) | VarType::Option(_) => {
+                    CodeFragment::Splice(parse_quote!(#var_ident.into_iter()))
+                }
+                _ => CodeFragment::Single(parse_quote!(#var_ident)),
+            });
+        }
+        lift_variants!(
+            self,
+            context,
+            Decl,
+            [
+                Class,
+                Fn,
+                Var,
+                Using,
+                TsInterface,
+                TsTypeAlias,
+                TsEnum,
+                TsModule
+            ]
+        )
+    }
+}
 
 impl_lift_for_struct!(ClassDecl, [ident, declare, class]);
 

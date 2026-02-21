@@ -74,6 +74,10 @@ pub(crate) fn preprocess(
                         let replacement = match ty.inner() {
                             VarType::LitStr => format!(r#""{placeholder}""#),
                             VarType::JsDoc => format!("/** {placeholder} */"),
+                            // Bare identifiers aren't valid in all `Decl`
+                            // positions (e.g., after `export`), so we use
+                            // `var __tsq_N__` as the stand-in for these.
+                            VarType::Decl => format!("var {placeholder}"),
                             _ => placeholder.clone(),
                         };
                         placeholders.insert(

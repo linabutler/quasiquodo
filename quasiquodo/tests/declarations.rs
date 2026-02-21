@@ -259,6 +259,41 @@ fn test_decl_option_splice_none() {
     );
 }
 
+#[test]
+fn test_decl_export_substitution() {
+    let decl: Decl = ts_quote!("interface Pet { name: string; }" as Decl);
+    let item: ModuleItem = ts_quote!("export $d" as ModuleItem, d: Decl = decl);
+    assert_eq!(
+        to_code(&item),
+        indoc! {"
+            export interface Pet {
+                name: string;
+            }
+        "},
+    );
+}
+
+#[test]
+fn test_decl_vec_splice_in_module_body() {
+    let decls: Vec<Decl> = vec![
+        ts_quote!("const x = 1;" as Decl),
+        ts_quote!("const y = 2;" as Decl),
+    ];
+    let item: ModuleItem = ts_quote!(
+        "namespace N { $Decls; }" as ModuleItem,
+        Decls: Vec<Decl> = decls
+    );
+    assert_eq!(
+        to_code(&item),
+        indoc! {"
+            namespace N {
+                const x = 1;
+                const y = 2;
+            }
+        "},
+    );
+}
+
 // MARK: Enum declarations
 
 #[test]
