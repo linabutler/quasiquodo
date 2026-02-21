@@ -88,7 +88,7 @@ struct MyView {
 ### Documentation (`///`)
 
 - Complete sentences with periods
-- Enclose code items in backticks
+- **Backtick code items.** Anything that appears verbatim in source code: types (`Expr`, `JsDoc`), functions (`lift()`), fields (`span`), macros (`ts_quote!`), syntax (`/*`, `$`), literals (`None`), paths (`crate::lift`). Not general concepts (JSDoc, quasiquoting, placeholder) or project names used as nouns (SWC).
 - Indicative mood ("Returns", not "Return")
 - Describe args/returns in prose, never separate sections
 - Wrap at 80 chars
@@ -114,7 +114,7 @@ pub fn new(resource: &'a str, operations: &'a [IrOperationView<'a>]) -> Self { .
 ### Comments (`//`)
 
 - Only for non-obvious logic
-- Enclose code items in backticks
+- Backtick code items (same rules as `///` docs above)
 - `//` comments: wrap at 80 chars; complete sentences with periods
 - `// MARK:` for sections: ~50 chars; no period
 
