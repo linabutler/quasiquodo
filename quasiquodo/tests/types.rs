@@ -104,28 +104,28 @@ fn test_type_ref_with_type_params() {
 #[test]
 fn test_ts_type_variable() {
     let some_type: TsType = ts_quote!("string" as TsType);
-    let ty: TsType = ts_quote!("$T | null" as TsType, T: TsType = some_type);
+    let ty: TsType = ts_quote!("@{T} | null" as TsType, T: TsType = some_type);
     assert_eq!(to_code(&ty), "string | null");
 }
 
 #[test]
 fn test_lit_str_in_type_position() {
     let v = "hello";
-    let ty: TsType = ts_quote!("$v" as TsType, v: LitStr = v);
+    let ty: TsType = ts_quote!("@{v}" as TsType, v: LitStr = v);
     assert_eq!(to_code(&ty), r#""hello""#);
 }
 
 #[test]
 fn test_lit_num_in_type_position() {
     let v = 42.0;
-    let ty: TsType = ts_quote!("$v" as TsType, v: LitNum = v);
+    let ty: TsType = ts_quote!("@{v}" as TsType, v: LitNum = v);
     assert_eq!(to_code(&ty), "42");
 }
 
 #[test]
 fn test_lit_bool_in_type_position() {
     let v = true;
-    let ty: TsType = ts_quote!("$v" as TsType, v: LitBool = v);
+    let ty: TsType = ts_quote!("@{v}" as TsType, v: LitBool = v);
     assert_eq!(to_code(&ty), "true");
 }
 
@@ -134,7 +134,7 @@ fn test_lit_str_in_union() {
     let active = "Active";
     let inactive = "Inactive";
     let ty: TsType = ts_quote!(
-        "$active | $inactive" as TsType,
+        "@{active} | @{inactive}" as TsType,
         active: LitStr = active,
         inactive: LitStr = inactive
     );
@@ -150,7 +150,7 @@ fn test_union_fixed_plus_vec_splice() {
         Box::new(ts_quote!("boolean" as TsType)),
     ];
     let ty: TsType = ts_quote!(
-        "string | $Extra" as TsType,
+        "string | @{Extra}" as TsType,
         Extra: Vec<Box<TsType>> = extra
     );
     assert_eq!(to_code(&ty), "string | number | boolean");
@@ -161,7 +161,7 @@ fn test_union_single_plus_vec_splice() {
     let base: TsType = ts_quote!("string" as TsType);
     let rest: Vec<Box<TsType>> = vec![Box::new(ts_quote!("null" as TsType))];
     let ty: TsType = ts_quote!(
-        "$T | $Rest" as TsType,
+        "@{T} | @{Rest}" as TsType,
         T: TsType = base,
         Rest: Vec<Box<TsType>> = rest
     );
@@ -173,7 +173,7 @@ fn test_intersection_vec_splice() {
     let base: TsType = ts_quote!("Base" as TsType);
     let mixins: Vec<Box<TsType>> = vec![Box::new(ts_quote!("Mixin" as TsType))];
     let ty: TsType = ts_quote!(
-        "$A & $B" as TsType,
+        "@{A} & @{B}" as TsType,
         A: TsType = base,
         B: Vec<Box<TsType>> = mixins
     );
@@ -184,7 +184,7 @@ fn test_intersection_vec_splice() {
 fn test_type_lit_vec_splice() {
     let rest: Vec<TsTypeElement> = vec![ts_quote!("age?: number" as TsTypeElement)];
     let ty: TsType = ts_quote!(
-        "{ id: string; $Rest; }" as TsType,
+        "{ id: string; @{Rest}; }" as TsType,
         Rest: Vec<TsTypeElement> = rest
     );
     assert_eq!(
@@ -200,7 +200,7 @@ fn test_type_lit_vec_splice() {
 fn test_single_ts_type_element_substitution() {
     let member: TsTypeElement = ts_quote!("age: number" as TsTypeElement);
     let ty: TsType = ts_quote!(
-        "{ id: string; $m; }" as TsType,
+        "{ id: string; @{m}; }" as TsType,
         m: TsTypeElement = member
     );
     assert_eq!(
@@ -216,7 +216,7 @@ fn test_single_ts_type_element_substitution() {
 fn test_union_vec_lit_str_splice() {
     let variants: Vec<&str> = vec!["active", "inactive"];
     let ty: TsType = ts_quote!(
-        "string | $Variants" as TsType,
+        "string | @{Variants}" as TsType,
         Variants: Vec<LitStr> = variants
     );
     assert_eq!(to_code(&ty), r#"string | "active" | "inactive""#);
@@ -234,11 +234,4 @@ fn test_type_element_property() {
 fn test_type_element_method() {
     let elem: TsTypeElement = ts_quote!("get(id: string): Pet;" as TsTypeElement);
     assert_eq!(to_code(&elem), "get(id: string): Pet;");
-}
-
-#[test]
-fn test_escape_dollar_ident_in_property_key() {
-    // `$$name` in source is an escape for the literal identifier `$name`.
-    let elem: TsTypeElement = ts_quote!("$$name: string;" as TsTypeElement);
-    assert_eq!(to_code(&elem), "$name: string;");
 }

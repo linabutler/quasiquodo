@@ -76,14 +76,14 @@ This syntax is inspired by the [`swc_ecma_quote`](https://rustdoc.swc.rs/swc_ecm
 
 ### Variable substitution
 
-You can use `$binding` placeholders to splice variables into the TypeScript syntax trees that `ts_quote!` builds. Each variable is declared with a name, type, and value, and replaces the placeholder at compile time:
+You can use `@{binding}` placeholders to splice variables into the TypeScript syntax trees that `ts_quote!` builds. Each variable is declared with a name, type, and value, and replaces the placeholder at compile time:
 
 ```rust
 let name: Ident = ts_quote!("Pet" as Ident);
 let field_type: TsType = ts_quote!("string[]" as TsType);
 
 let ast = ts_quote!(
-    "$name: $field_type" as TsTypeElement,
+    "@{name}: @{field_type}" as TsTypeElement,
     name: Ident = name,
     field_type: TsType = field_type,
 );
@@ -93,11 +93,11 @@ let ast = ts_quote!(
 
 ```rust
 let name = "color";
-let ast = ts_quote!("$name: string" as TsTypeElement, name: LitStr = name);
+let ast = ts_quote!("@{name}: string" as TsTypeElement, name: LitStr = name);
 // => `color: string;`
 
 let field = "name";
-let ast: Expr = ts_quote!("foo[$f]" as Expr, f: LitStr = field);
+let ast: Expr = ts_quote!("foo[@{f}]" as Expr, f: LitStr = field);
 // => `foo.name`
 ```
 
@@ -105,11 +105,11 @@ let ast: Expr = ts_quote!("foo[$f]" as Expr, f: LitStr = field);
 
 ```rust
 let name = "background-color";
-let ast = ts_quote!("$name: string" as TsTypeElement, name: LitStr = name);
+let ast = ts_quote!("@{name}: string" as TsTypeElement, name: LitStr = name);
 // => `"background-color": string;`
 
 let field = "some-field";
-let ast: Expr = ts_quote!("foo[$f]" as Expr, f: LitStr = field);
+let ast: Expr = ts_quote!("foo[@{f}]" as Expr, f: LitStr = field);
 // => `foo["some-field"]`
 ```
 
@@ -118,27 +118,10 @@ Placeholders can occur in any position, even where TypeScript wouldn't normally 
 ```rust
 let module = "./types";
 let ast = ts_quote!(
-    "import type { Pet } from $module;" as ModuleItem,
+    "import type { Pet } from @{module};" as ModuleItem,
     module: LitStr = module,
 );
 // => `import type { Pet } from "./types";`
-```
-
-To include a literal `$` in the output, use `$$`:
-
-```rust
-let ast: Expr = ts_quote!("$$foo" as Expr);
-// => `$foo`
-```
-
-`$$` escapes work in JSDoc comments, too:
-
-```rust
-let ast: TsTypeElement = ts_quote!(
-    comments,
-    "/** See $$ref for details. */ name: string" as TsTypeElement,
-);
-// => `/** See $ref for details. */ name: string;`
 ```
 
 ### Splicing
@@ -162,7 +145,7 @@ let members: Vec<TsTypeElement> = vec![
 ];
 
 let ast = ts_quote!(
-    "export interface $N { $M; }" as ModuleItem,
+    "export interface @{N} { @{M}; }" as ModuleItem,
     N: Ident = name,
     M: Vec<TsTypeElement> = members,
 );
@@ -186,7 +169,7 @@ let extra = vec![
 ];
 
 let ty: TsType = ts_quote!(
-    "string | $Extra" as TsType,
+    "string | @{Extra}" as TsType,
     Extra: Vec<Box<TsType>> = extra,
 );
 // => `string | number | boolean`
@@ -202,7 +185,7 @@ let extra: Option<TsTypeElement> = if include_age {
 };
 
 let ast = ts_quote!(
-    "export interface Pet { name: string; $extra; }" as ModuleItem,
+    "export interface Pet { name: string; @{extra}; }" as ModuleItem,
     extra: Option<TsTypeElement> = extra,
 );
 ```
@@ -229,7 +212,7 @@ This is useful for error reporting, so that diagnostics point to the right locat
 ```rust
 let description = "The pet's name.";
 let ast = ts_quote!(
-    "/** $desc */ name: string" as TsTypeElement,
+    "/** @{desc} */ name: string" as TsTypeElement,
     desc: LitStr = description,
 );
 ```
@@ -245,7 +228,7 @@ let noun = "pet's name";
 let adjective = "required";
 let ast = ts_quote!(
     comments,
-    "/** The $noun is $adjective. */ name: string" as TsTypeElement,
+    "/** The @{noun} is @{adjective}. */ name: string" as TsTypeElement,
     noun: LitStr = noun,
     adjective: LitStr = adjective,
 );
@@ -264,7 +247,7 @@ let comments = Comments::new();
 let doc = JsDoc::new("The pet's name.");
 let ast = ts_quote!(
     comments,
-    "export interface Pet { $doc name: string; }" as ModuleItem,
+    "export interface Pet { @{doc} name: string; }" as ModuleItem,
     doc: JsDoc = doc,
 );
 
@@ -290,7 +273,7 @@ let doc: Option<JsDoc> = if include_docs {
 
 let ast = ts_quote!(
     comments,
-    "$doc name: string" as TsTypeElement,
+    "@{doc} name: string" as TsTypeElement,
     doc: Option<JsDoc> = doc,
 );
 // Either `/** The pet's name. */ name: string;` or
@@ -306,13 +289,13 @@ let doc = JsDoc::new("The pet's name.");
 // Attach the comment to a member...
 let member: ClassMember = ts_quote!(
     comments,
-    "$doc name: string" as ClassMember,
+    "@{doc} name: string" as ClassMember,
     doc: JsDoc = doc,
 );
 
 // ...then splice the member into a class.
 let class: Stmt = ts_quote!(
-    "class Pet { $m }" as Stmt,
+    "class Pet { @{m} }" as Stmt,
     m: ClassMember = member,
 );
 
@@ -350,7 +333,7 @@ The output kind indicates which [`swc_ecma_ast`](https://rustdoc.swc.rs/swc_ecma
 
 ### Variable types
 
-Variables declared with `$binding` can have scalar, boxed, or container types.
+Variables declared with `@{binding}` can have scalar, boxed, or container types.
 
 **Scalar types** substitute a single node or literal value:
 
@@ -387,7 +370,7 @@ Variables declared with `$binding` can have scalar, boxed, or container types.
 To do this, Quasiquodo:
 
 1. Parses the Rust macro input, extracting the source, output kind, and optional variable declarations.
-2. **Replaces `$binding` placeholders** with syntactically appropriate stand-ins, so that the result is valid TypeScript.
+2. **Replaces `@{binding}` placeholders** with syntactically appropriate stand-ins, so that the result is valid TypeScript.
 3. **Parses the preprocessed source** with `swc_ecma_parser`, and extracts the output `swc_ecma_ast` type from the syntax tree.
 4. **Generates Rust code** from the output, "unparsing" each syntax tree node into a `syn::Expr` that constructs the equivalent `swc_ecma_ast` type, and replacing placeholder nodes with the actual variables passed to the macro.
 

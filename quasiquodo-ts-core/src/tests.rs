@@ -41,7 +41,7 @@ fn test_expand_with_span_parameter() {
 #[test]
 fn test_expand_with_span_and_variables() {
     let actual = expand_expr(quote!(
-        span = my_span, "$name: $ty" as TsTypeElement, name: LitStr = "foo", ty: TsType = my_ty
+        span = my_span, "@{name}: @{ty}" as TsTypeElement, name: LitStr = "foo", ty: TsType = my_ty
     ));
     let expected: syn::Expr = parse_quote! {{
         let quote_var_name: &str = "foo";
@@ -144,7 +144,7 @@ fn test_expand_static_doc_comment() {
 fn test_expand_dynamic_doc_comment() {
     let actual = expand_expr(quote!(
         comments = my_comments,
-        "/** $desc */ name: string" as TsTypeElement,
+        "/** @{desc} */ name: string" as TsTypeElement,
         desc: LitStr = "hello"
     ));
     let expected: syn::Expr = parse_quote! {{
@@ -202,7 +202,7 @@ fn test_expand_import_specifier_named() {
 fn test_expand_jsdoc_variable() {
     let actual = expand_expr(quote!(
         comments = my_comments,
-        "$doc name: string" as TsTypeElement,
+        "@{doc} name: string" as TsTypeElement,
         doc: JsDoc = my_doc
     ));
     let expected: syn::Expr = parse_quote! {{
@@ -236,7 +236,7 @@ fn test_expand_jsdoc_variable() {
 fn test_expand_option_jsdoc_variable() {
     let actual = expand_expr(quote!(
         comments = my_comments,
-        "$doc name: string" as TsTypeElement,
+        "@{doc} name: string" as TsTypeElement,
         doc: Option<JsDoc> = my_doc
     ));
     let expected: syn::Expr = parse_quote! {{
@@ -274,7 +274,7 @@ fn test_expand_jsdoc_variable_without_comments() {
     // Without a `comments` argument to collect them, `JsDoc` variables
     // become dummy spans, effectively dropping them.
     let actual = expand_expr(quote!(
-        "$doc name: string" as TsTypeElement,
+        "@{doc} name: string" as TsTypeElement,
         doc: JsDoc = my_doc
     ));
     let expected: syn::Expr = parse_quote! {{
@@ -307,7 +307,7 @@ fn test_expand_jsdoc_variable_without_comments() {
 #[test]
 fn test_expand_import_specifier_with_ident_variable() {
     let actual = expand_expr(quote!(
-        "$local" as ImportSpecifier, local: Ident = my_ident
+        "@{local}" as ImportSpecifier, local: Ident = my_ident
     ));
     let expected: syn::Expr = parse_quote! {{
         let quote_var_local: ::quasiquodo::ts::swc::ecma_ast::Ident = my_ident;

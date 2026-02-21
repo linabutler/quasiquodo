@@ -33,7 +33,7 @@ fn test_stmt_variable_decl() {
 fn test_function_params_vec_splice() {
     let params: Vec<Param> = vec![ts_quote!("x: string" as Param)];
     let stmt: Stmt = ts_quote!(
-        "function foo($Params) {}" as Stmt,
+        "function foo(@{Params}) {}" as Stmt,
         Params: Vec<Param> = params
     );
     assert_eq!(
@@ -48,7 +48,7 @@ fn test_function_params_vec_splice() {
 fn test_single_param_substitution() {
     let my_param: Param = ts_quote!("x: number" as Param);
     let stmt: Stmt = ts_quote!(
-        "function foo($p) {}" as Stmt,
+        "function foo(@{p}) {}" as Stmt,
         p: Param = my_param
     );
     assert_eq!(
@@ -65,7 +65,7 @@ fn test_single_param_substitution() {
 fn test_block_stmts_vec_splice() {
     let body: Vec<Stmt> = vec![ts_quote!("return 2;" as Stmt)];
     let stmt: Stmt = ts_quote!(
-        "function foo() { const x = 1; $Body; }" as Stmt,
+        "function foo() { const x = 1; @{Body}; }" as Stmt,
         Body: Vec<Stmt> = body
     );
     assert_eq!(
@@ -85,7 +85,7 @@ fn test_block_stmts_vec_splice() {
 fn test_class_body_vec_splice() {
     let members: Vec<ClassMember> = vec![ts_quote!("age: number;" as ClassMember)];
     let stmt: Stmt = ts_quote!(
-        "class Foo { name: string; $Members; }" as Stmt,
+        "class Foo { name: string; @{Members}; }" as Stmt,
         Members: Vec<ClassMember> = members
     );
     assert_eq!(
@@ -103,7 +103,7 @@ fn test_class_body_vec_splice() {
 fn test_single_class_member_substitution() {
     let member: ClassMember = ts_quote!("age: number;" as ClassMember);
     let stmt: Stmt = ts_quote!(
-        "class Foo { name: string; $m; }" as Stmt,
+        "class Foo { name: string; @{m}; }" as Stmt,
         m: ClassMember = member
     );
     assert_eq!(
@@ -123,7 +123,7 @@ fn test_single_class_member_substitution() {
 fn test_block_stmts_option_splice_some() {
     let extra: Option<Stmt> = Some(ts_quote!("return 2;" as Stmt));
     let stmt: Stmt = ts_quote!(
-        "function foo() { const x = 1; $Body; }" as Stmt,
+        "function foo() { const x = 1; @{Body}; }" as Stmt,
         Body: Option<Stmt> = extra
     );
     assert_eq!(
@@ -141,7 +141,7 @@ fn test_block_stmts_option_splice_some() {
 fn test_block_stmts_option_splice_none() {
     let extra: Option<Stmt> = None;
     let stmt: Stmt = ts_quote!(
-        "function foo() { const x = 1; $Body; }" as Stmt,
+        "function foo() { const x = 1; @{Body}; }" as Stmt,
         Body: Option<Stmt> = extra
     );
     assert_eq!(
@@ -158,7 +158,7 @@ fn test_block_stmts_option_splice_none() {
 fn test_class_body_option_splice_some() {
     let member: Option<ClassMember> = Some(ts_quote!("age: number;" as ClassMember));
     let stmt: Stmt = ts_quote!(
-        "class Foo { name: string; $M; }" as Stmt,
+        "class Foo { name: string; @{M}; }" as Stmt,
         M: Option<ClassMember> = member
     );
     assert_eq!(
@@ -176,7 +176,7 @@ fn test_class_body_option_splice_some() {
 fn test_class_body_option_splice_none() {
     let member: Option<ClassMember> = None;
     let stmt: Stmt = ts_quote!(
-        "class Foo { name: string; $M; }" as Stmt,
+        "class Foo { name: string; @{M}; }" as Stmt,
         M: Option<ClassMember> = member
     );
     assert_eq!(

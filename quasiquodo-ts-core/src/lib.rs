@@ -32,7 +32,7 @@ pub fn expand(input: proc_macro2::TokenStream) -> proc_macro2::TokenStream {
 fn expand_inner(input: proc_macro2::TokenStream) -> syn::Result<proc_macro2::TokenStream> {
     let input: MacroInput = syn::parse2(input)?;
 
-    // Preprocess: replace `$binding` with type-appropriate placeholders.
+    // Preprocess: replace `@{binding}` with type-appropriate placeholders.
     let (preprocessed, placeholders) = lexer::preprocess(input.source.value(), &input.variables)
         .map_err(|err| syn::Error::new(input.source.span(), err))?;
 

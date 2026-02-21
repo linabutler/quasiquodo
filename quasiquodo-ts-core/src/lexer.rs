@@ -3,29 +3,31 @@ use std::ops::Range;
 
 use swc_common::comments::{Comment, SingleThreadedComments, SingleThreadedCommentsMapInner};
 use swc_common::sync::Lrc;
-use swc_common::{FileName, SourceMap};
+use swc_common::{BytePos, FileName, SourceMap};
 use swc_ecma_ast::{EsVersion, Ident};
+use swc_ecma_parser::unstable::{Token, TokenAndSpan};
 use swc_ecma_parser::{Lexer, StringInput, Syntax, TsSyntax};
 use winnow::Parser;
 
 use super::{
-    context::{PlaceholderData, VarName},
+    context::{PlaceholderData, UnboundVar, VarName},
     input::{VarType, Variable},
 };
 
-/// Preprocesses a TypeScript source string, replacing `$var` markers
-/// with type-appropriate placeholders prior to parsing.
+/// Preprocesses a TypeScript source string, replacing `@{var}`
+/// markers with type-appropriate placeholders prior to parsing:
 ///
-/// For `LitStr` variables, `$name` becomes `"__tsq_N__"`, so that
-/// [`swc_ecma_parser`] can parse it as a string literal. For all other types,
-/// `$name` becomes an identifier like `__tsq_N__`.
+/// * For `LitStr` variables, `@{name}` becomes `"__tsq_N__"`, because
+///   positions like `ImportSpecifier` require string literals.
+/// * For `Decl` variables, `@{name}` becomes `var __tsq_N__`, because
+///   positions like `ExportDecl` require declarations.
+/// * For all other types, `@{name}` becomes an identifier like
+///   `__tsq_N__`.
 ///
 /// Preprocessing also scans JSDoc-style comments (`/** ... */`) for
-/// `$var` markers. Variables in JSDoc comments must be `LitStr` or
-/// `Option<LitStr>`, and their markers become bare `__tsq_N__` placeholders.
-///
-/// A `$$` escapes a literal `$`: `$$` becomes `$` after preprocessing,
-/// and `$$ident` becomes `$ident`.
+/// `@{var}` markers. Variables in JSDoc comments must be `LitStr` or
+/// `Option<LitStr>`, and their markers become bare `__tsq_N__`
+/// placeholders.
 ///
 /// Returns the preprocessed source and a map from placeholder values
 /// to variable data.
@@ -42,8 +44,8 @@ pub(crate) fn preprocess(
     let mut placeholders = HashMap::new();
     let mut replacements = vec![];
 
-    // Use SWC's lexer to scan the source for `$var` references and
-    // `$$` escapes, and collect comments so that we can do the same.
+    // Use SWC's lexer to scan the source for `@{var}` markers,
+    // and collect comments so that we can scan them after.
     let source_map = Lrc::new(SourceMap::default());
     let source_file = source_map.new_source_file(FileName::Anon.into(), source.to_owned());
     let comments = SingleThreadedComments::default();
@@ -54,82 +56,72 @@ pub(crate) fn preprocess(
         Some(&comments),
     );
 
-    for t in lexer.filter(|t| t.token.is_word()) {
-        let (start, end) = source_map.span_to_char_offset(&source_file, t.span);
-        let start = usize::try_from(start).unwrap();
-        let end = usize::try_from(end).unwrap();
-        let Ok(token) = dollar::token.parse(&source[start..end]) else {
-            continue;
-        };
+    let all_tokens: Vec<_> = lexer.collect();
+    let base = source_file.start_pos;
 
-        match token {
-            dollar::Token::Escape(suffix) => {
-                // Escaped dollar sign: replace `$$suffix` with `$suffix`.
-                replacements.push((format!("${suffix}"), start..end));
-            }
-            dollar::Token::Variable(name) => {
-                let replacement = match variables.get(name) {
-                    Some(&(index, ty)) => {
-                        let placeholder = format!("__tsq_{index}__");
-                        let replacement = match ty.inner() {
-                            VarType::LitStr => format!(r#""{placeholder}""#),
-                            VarType::JsDoc => format!("/** {placeholder} */"),
-                            // Bare identifiers aren't valid in all `Decl`
-                            // positions (e.g., after `export`), so we use
-                            // `var __tsq_N__` as the stand-in for these.
-                            VarType::Decl => format!("var {placeholder}"),
-                            _ => placeholder.clone(),
-                        };
-                        placeholders.insert(
-                            placeholder,
-                            PlaceholderData {
-                                var: VarName::from_str(name),
-                            },
-                        );
-                        replacement
-                    }
-                    None => String::new(),
+    for (name, span) in Markers::new(&all_tokens, &source, base) {
+        let replacement = match variables.get(name) {
+            Some(&(index, ty)) => {
+                let placeholder = format!("__tsq_{index}__");
+                let replacement = match ty.inner() {
+                    VarType::LitStr => format!(r#""{placeholder}""#),
+                    VarType::JsDoc => format!("/** {placeholder} */"),
+                    // Bare identifiers aren't valid in all `Decl`
+                    // positions (e.g., after `export`), so we use
+                    // `var __tsq_N__` as the stand-in for these.
+                    VarType::Decl => format!("var {placeholder}"),
+                    // Identifiers are valid in all other positions.
+                    _ => placeholder.clone(),
                 };
-                replacements.push((replacement, start..end));
+                placeholders.insert(
+                    placeholder,
+                    PlaceholderData {
+                        var: VarName::from_str(name),
+                    },
+                );
+                replacement
             }
-        }
+            None => return Err(UnboundVar(name.to_owned()))?,
+        };
+        replacements.push((replacement, span));
     }
 
     {
-        // Scan all collected JSDoc-style comments for `$var` references
-        // and `$$` escapes.
+        // Scan all collected JSDoc-style comments for `@{var}`
+        // references.
         let (leading, trailing) = comments.borrow_all();
         for comment in docs::comments(&leading, &trailing) {
             // The span includes the `/* ... */` delimiters in
             // the source file, so add 2 for offsets.
-            let (start, _) = source_map.span_to_char_offset(&source_file, comment.span);
-            let offset = usize::try_from(start).unwrap() + 2;
+            let offset = (comment.span.lo - base).0 as usize + 2;
 
-            // Insert placeholders for all `$var` references and
-            // unescape all `$$` sequences.
-            for (token, span) in dollar::tokens(&comment.text) {
-                let replacement = match token {
-                    dollar::Token::Escape(s) => format!("${s}"),
-                    dollar::Token::Variable(name) => match variables.get(name) {
-                        Some(&(index, ty)) => match ty.inner() {
-                            // Only string splices (`LitStr` and `Option<LitStr>`)
-                            // are allowed in JSDoc comments.
-                            VarType::LitStr => {
-                                let placeholder = format!("__tsq_{index}__");
-                                placeholders.insert(
-                                    placeholder.clone(),
-                                    PlaceholderData {
-                                        var: VarName::from_str(name),
-                                    },
-                                );
-                                placeholder
-                            }
-                            _ => {
-                                return Err(PreprocessError::JsDocVarType(name.to_owned(), ty));
-                            }
-                        },
-                        None => String::new(),
-                    },
+            // Insert placeholders for all `@{var}` references.
+            for (name, span) in marker::tokens(&comment.text) {
+                let replacement = match variables.get(name) {
+                    Some(&(index, ty)) => {
+                        // Only string splices (`LitStr` and `Option<LitStr>`)
+                        // are allowed in JSDoc comments.
+                        if matches!(ty, VarType::LitStr)
+                            || matches!(ty, VarType::Option(inner)
+                                if matches!(**inner, VarType::LitStr))
+                        {
+                            let placeholder = format!("__tsq_{index}__");
+                            placeholders.insert(
+                                placeholder.clone(),
+                                PlaceholderData {
+                                    var: VarName::from_str(name),
+                                },
+                            );
+                            placeholder
+                        } else {
+                            return Err(PreprocessError::JsDocVarType(name.to_owned(), ty));
+                        }
+                    }
+                    None => {
+                        return Err(PreprocessError::JsDocUnboundVar(UnboundVar(
+                            name.to_owned(),
+                        )));
+                    }
                 };
                 replacements.push((replacement, offset + span.start..offset + span.end));
             }
@@ -145,6 +137,59 @@ pub(crate) fn preprocess(
     }
 
     Ok((source, placeholders))
+}
+
+/// An iterator over `@{name}` markers in a TypeScript token stream.
+///
+/// Recognizes adjacent `[@ { Word }]` token sequences, and yields
+/// the variable name and byte range of each.
+struct Markers<'a> {
+    tokens: &'a [TokenAndSpan],
+    source: &'a str,
+    base: BytePos,
+}
+
+impl<'a> Markers<'a> {
+    fn new(tokens: &'a [TokenAndSpan], source: &'a str, base: BytePos) -> Self {
+        Self {
+            tokens,
+            source,
+            base,
+        }
+    }
+
+    /// Converts a span position to a byte offset in `source`.
+    fn offset(&self, pos: BytePos) -> usize {
+        (pos - self.base).0 as usize
+    }
+}
+
+impl<'a> Iterator for Markers<'a> {
+    type Item = (&'a str, Range<usize>);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            match self.tokens {
+                [at, lbrace, name, rbrace, rest @ ..]
+                    if matches!(at.token, Token::At)
+                        && matches!(lbrace.token, Token::LBrace)
+                        && name.token.is_word()
+                        && matches!(rbrace.token, Token::RBrace)
+                        && at.span.hi == lbrace.span.lo
+                        && lbrace.span.hi == name.span.lo
+                        && name.span.hi == rbrace.span.lo =>
+                {
+                    self.tokens = rest;
+                    let var = &self.source[self.offset(name.span.lo)..self.offset(name.span.hi)];
+                    let start = self.offset(at.span.lo);
+                    let end = self.offset(rbrace.span.hi);
+                    return Some((var, start..end));
+                }
+                [_, rest @ ..] => self.tokens = rest,
+                [] => return None,
+            }
+        }
+    }
 }
 
 pub(crate) mod docs {
@@ -222,7 +267,7 @@ pub(crate) mod docs {
     }
 }
 
-pub(crate) mod dollar {
+pub(crate) mod marker {
     use super::*;
 
     use winnow::{
@@ -231,36 +276,23 @@ pub(crate) mod dollar {
         token::{any, take_while},
     };
 
-    /// A `$`-prefixed token recognized during preprocessing.
-    #[derive(Debug)]
-    pub enum Token<'a> {
-        /// An escaped dollar sign, like `$$` or `$$ident`. The inner `&str` is
-        /// the identifier continuation after `$$`, and can be empty.
-        Escape(&'a str),
-        /// A variable reference, like `$ident`. The inner `&str` is
-        /// the identifier name, without the leading `$`.
-        Variable(&'a str),
-    }
-
-    /// Collects all [`Token`]s in the source text, returning each token
-    /// and its byte span.
-    pub fn tokens(text: &str) -> Vec<(Token<'_>, Range<usize>)> {
-        /// Consumes a `$` token at the current word boundary.
+    /// Collects all markers in the source text, returning each marker's
+    /// identifier name (without `@{` and `}`) and byte span.
+    pub fn tokens(text: &str) -> Vec<(&str, Range<usize>)> {
+        /// Consumes a `@{name}` token.
         #[inline]
         fn consume<'a>(
             input: &mut LocatingSlice<&'a str>,
-        ) -> winnow::Result<Option<(Token<'a>, Range<usize>)>> {
+        ) -> winnow::Result<Option<(&'a str, Range<usize>)>> {
             token.with_span().parse_next(input).map(Some)
         }
 
-        /// Skips over non-`$` content, greedily consuming identifier runs
-        /// until the next word boundary, to ensure that `$` only matches
-        /// at word boundaries, not inside words.
+        /// Skips over non-`@{...}` content.
         #[inline]
         fn skip<'a>(
             input: &mut LocatingSlice<&'a str>,
-        ) -> winnow::Result<Option<(Token<'a>, Range<usize>)>> {
-            alt((take_while(1.., Ident::is_valid_continue).void(), any.void()))
+        ) -> winnow::Result<Option<(&'a str, Range<usize>)>> {
+            alt((take_while(1.., |c: char| c != '@').void(), any.void()))
                 .parse_next(input)
                 .map(|()| None)
         }
@@ -276,80 +308,63 @@ pub(crate) mod dollar {
 
     /// Parses a single [`Token`] from the input.
     #[inline]
-    pub fn token<'a, I>(input: &mut I) -> winnow::Result<Token<'a>>
+    pub fn token<'a, I>(input: &mut I) -> winnow::Result<I::Slice>
     where
         I: Stream<Slice = &'a str, Token = char> + StreamIsPartial + Compare<I::Token>,
     {
-        alt((
-            ('$', '$', take_while(0.., Ident::is_valid_continue))
-                .map(|(_, _, suffix)| Token::Escape(suffix)),
-            ('$', take_while(1.., Ident::is_valid_continue)).map(|(_, name)| Token::Variable(name)),
-        ))
-        .parse_next(input)
+        ('@', '{', take_while(1.., Ident::is_valid_continue), '}')
+            .map(|(_, _, name, _)| name)
+            .parse_next(input)
     }
 }
 
 #[derive(Debug, thiserror::Error)]
 pub enum PreprocessError<'a> {
-    #[error("variable `${0}` in JSDoc comment must have type `LitStr`, but has type `{1:?}`")]
+    #[error(transparent)]
+    UnboundVar(#[from] UnboundVar),
+    #[error(
+        "variable `@{{{0}}}` in JSDoc comment must have type \
+         `LitStr` or `JsDoc`, but has type `{1:?}`"
+    )]
     JsDocVarType(String, &'a VarType),
+    #[error("variable `@{{{0}}}` in JSDoc comment not bound to a value")]
+    JsDocUnboundVar(UnboundVar),
 }
 
 #[cfg(test)]
 mod tests {
     use super::{
         docs::{CommentSegment, segments},
-        dollar::{Token, tokens},
+        marker::tokens,
     };
 
-    // MARK: `$` word boundaries
+    // MARK: `@{...}` markers
 
     #[test]
-    fn test_tokens_variable_at_word_boundary() {
-        let result = tokens("foo $bar baz");
+    fn test_tokens_variable_surrounded_by_spaces() {
+        let result = tokens("foo @{bar} baz");
         assert_eq!(result.len(), 1);
-        let (ref tok, ref span) = result[0];
-        let Token::Variable(name) = tok else {
-            panic!("expected `Token::Variable`; got `{tok:?}`")
-        };
-        assert_eq!(*name, "bar");
-        assert_eq!(*span, 4..8);
+        let (name, ref span) = result[0];
+        assert_eq!(name, "bar");
+        assert_eq!(*span, 4..10);
     }
 
     #[test]
-    fn test_tokens_variable_not_at_word_boundary() {
-        let result = tokens("foo$barbaz");
-        assert!(result.is_empty());
+    fn test_tokens_variable_adjacent_to_text() {
+        let result = tokens("foo@{bar}baz");
+        assert_eq!(result.len(), 1);
+        let (name, ref span) = result[0];
+        assert_eq!(name, "bar");
+        assert_eq!(*span, 3..9);
     }
 
     #[test]
     fn test_tokens_variable_at_start() {
-        let result = tokens("$bar");
+        let result = tokens("@{bar}");
         assert_eq!(result.len(), 1);
-        let (ref tok, ref span) = result[0];
-        let Token::Variable(name) = tok else {
-            panic!("expected `Token::Variable`; got `{tok:?}`")
-        };
-        assert_eq!(*name, "bar");
-        assert_eq!(*span, 0..4);
-    }
-
-    #[test]
-    fn test_tokens_escape_at_word_boundary() {
-        let result = tokens("foo $$bar");
-        assert_eq!(result.len(), 1);
-        let (ref tok, ref span) = result[0];
-        let Token::Escape(suffix) = tok else {
-            panic!("expected `Token::Escape`; got `{tok:?}`")
-        };
-        assert_eq!(*suffix, "bar");
-        assert_eq!(*span, 4..9);
-    }
-
-    #[test]
-    fn test_tokens_escape_not_at_word_boundary() {
-        let result = tokens("foo$$bar");
-        assert!(result.is_empty());
+        let (name, ref span) = result[0];
+        assert_eq!(name, "bar");
+        assert_eq!(*span, 0..6);
     }
 
     // MARK: Placeholder word boundaries

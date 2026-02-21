@@ -65,7 +65,7 @@ fn test_generic_type_alias() {
 #[test]
 fn test_type_alias_with_ident_variable() {
     let my_name: Ident = ts_quote!("MyType" as Ident);
-    let ast = ts_quote!("export type $Name = string;" as ModuleItem, Name: Ident = my_name);
+    let ast = ts_quote!("export type @{Name} = string;" as ModuleItem, Name: Ident = my_name);
     assert_eq!(
         to_code(&ast),
         indoc! {"
@@ -105,7 +105,7 @@ fn test_import_specifiers_vec_splice() {
         ts_quote!("Bar" as ImportSpecifier),
     ];
     let ast = ts_quote!(
-        r#"import type { $Specs } from "./types";"# as ModuleItem,
+        r#"import type { @{Specs} } from "./types";"# as ModuleItem,
         Specs: Vec<ImportSpecifier> = specs
     );
     assert_eq!(
@@ -120,7 +120,7 @@ fn test_import_specifiers_vec_splice() {
 fn test_import_fixed_plus_vec_splice() {
     let rest: Vec<ImportSpecifier> = vec![ts_quote!("Bar" as ImportSpecifier)];
     let ast = ts_quote!(
-        r#"import { Foo, $Rest } from "./types";"# as ModuleItem,
+        r#"import { Foo, @{Rest} } from "./types";"# as ModuleItem,
         Rest: Vec<ImportSpecifier> = rest
     );
     assert_eq!(
@@ -135,7 +135,7 @@ fn test_import_fixed_plus_vec_splice() {
 fn test_import_vec_ident_splice() {
     let names: Vec<Ident> = vec![ts_quote!("Pet" as Ident), ts_quote!("Owner" as Ident)];
     let ast = ts_quote!(
-        r#"import type { $Names } from "./types";"# as ModuleItem,
+        r#"import type { @{Names} } from "./types";"# as ModuleItem,
         Names: Vec<Ident> = names
     );
     assert_eq!(
@@ -150,7 +150,7 @@ fn test_import_vec_ident_splice() {
 fn test_single_import_specifier_substitution() {
     let my_spec: ImportSpecifier = ts_quote!("Foo" as ImportSpecifier);
     let ast = ts_quote!(
-        r#"import { $s } from "./types";"# as ModuleItem,
+        r#"import { @{s} } from "./types";"# as ModuleItem,
         s: ImportSpecifier = my_spec
     );
     assert_eq!(
@@ -178,7 +178,7 @@ fn test_named_export_reexport() {
 fn test_named_export_vec_export_specifier_splice() {
     let specs: Vec<ExportSpecifier> = vec![ts_quote!("Pet" as ExportSpecifier)];
     let ast = ts_quote!(
-        r#"export type { $Specs } from "./types";"# as ModuleItem,
+        r#"export type { @{Specs} } from "./types";"# as ModuleItem,
         Specs: Vec<ExportSpecifier> = specs
     );
     assert_eq!(
@@ -194,7 +194,7 @@ fn test_named_export_vec_export_specifier_splice() {
 #[test]
 fn test_decl_scalar_substitution_in_stmt() {
     let decl: Decl = ts_quote!("const x = 1;" as Decl);
-    let stmt: Stmt = ts_quote!("{ $d; }" as Stmt, d: Decl = decl);
+    let stmt: Stmt = ts_quote!("{ @{d}; }" as Stmt, d: Decl = decl);
     assert_eq!(
         to_code(&stmt),
         indoc! {"{
@@ -206,7 +206,7 @@ fn test_decl_scalar_substitution_in_stmt() {
 #[test]
 fn test_decl_scalar_substitution_in_module_item() {
     let decl: Decl = ts_quote!("const x = 1;" as Decl);
-    let item: ModuleItem = ts_quote!("$d" as ModuleItem, d: Decl = decl);
+    let item: ModuleItem = ts_quote!("@{d}" as ModuleItem, d: Decl = decl);
     assert_eq!(
         to_code(&item),
         indoc! {"
@@ -221,7 +221,7 @@ fn test_decl_vec_splice_in_block() {
         ts_quote!("const x = 1;" as Decl),
         ts_quote!("const y = 2;" as Decl),
     ];
-    let stmt: Stmt = ts_quote!("function f() { $Decls; }" as Stmt, Decls: Vec<Decl> = decls);
+    let stmt: Stmt = ts_quote!("function f() { @{Decls}; }" as Stmt, Decls: Vec<Decl> = decls);
     assert_eq!(
         to_code(&stmt),
         indoc! {"
@@ -236,7 +236,7 @@ fn test_decl_vec_splice_in_block() {
 #[test]
 fn test_decl_option_splice_some() {
     let decl: Option<Decl> = Some(ts_quote!("const x = 1;" as Decl));
-    let stmt: Stmt = ts_quote!("function f() { $d; }" as Stmt, d: Option<Decl> = decl);
+    let stmt: Stmt = ts_quote!("function f() { @{d}; }" as Stmt, d: Option<Decl> = decl);
     assert_eq!(
         to_code(&stmt),
         indoc! {"
@@ -250,7 +250,7 @@ fn test_decl_option_splice_some() {
 #[test]
 fn test_decl_option_splice_none() {
     let decl: Option<Decl> = None;
-    let stmt: Stmt = ts_quote!("function f() { $d; }" as Stmt, d: Option<Decl> = decl);
+    let stmt: Stmt = ts_quote!("function f() { @{d}; }" as Stmt, d: Option<Decl> = decl);
     assert_eq!(
         to_code(&stmt),
         indoc! {"
@@ -262,7 +262,7 @@ fn test_decl_option_splice_none() {
 #[test]
 fn test_decl_export_substitution() {
     let decl: Decl = ts_quote!("interface Pet { name: string; }" as Decl);
-    let item: ModuleItem = ts_quote!("export $d" as ModuleItem, d: Decl = decl);
+    let item: ModuleItem = ts_quote!("export @{d}" as ModuleItem, d: Decl = decl);
     assert_eq!(
         to_code(&item),
         indoc! {"
@@ -280,7 +280,7 @@ fn test_decl_vec_splice_in_module_body() {
         ts_quote!("const y = 2;" as Decl),
     ];
     let item: ModuleItem = ts_quote!(
-        "namespace N { $Decls; }" as ModuleItem,
+        "namespace N { @{Decls}; }" as ModuleItem,
         Decls: Vec<Decl> = decls
     );
     assert_eq!(

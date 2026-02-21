@@ -174,3 +174,7 @@ pub(crate) struct PlaceholderData {
     /// The variable name, corresponding to [`Context::vars`].
     pub var: VarName,
 }
+
+#[derive(Debug, thiserror::Error)]
+#[error("variable `@{{{0}}}` not bound to a value")]
+pub struct UnboundVar(pub String);
