@@ -25,8 +25,8 @@ use super::{
 ///   `__tsq_N__`.
 ///
 /// Preprocessing also scans JSDoc-style comments (`/** ... */`) for
-/// `@{var}` markers. Variables in JSDoc comments must be `LitStr` or
-/// `Option<LitStr>`, and their markers become bare `__tsq_N__`
+/// `@{var}` markers. Variables in JSDoc comments must be `LitStr`, `JsDoc`,
+/// or `Option<LitStr | JsDoc>`, and their markers become bare `__tsq_N__`
 /// placeholders.
 ///
 /// Returns the preprocessed source and a map from placeholder values
@@ -99,11 +99,11 @@ pub(crate) fn preprocess(
             for (name, span) in marker::tokens(&comment.text) {
                 let replacement = match variables.get(name) {
                     Some(&(index, ty)) => {
-                        // Only string splices (`LitStr` and `Option<LitStr>`)
+                        // Only string (`LitStr`) and `JsDoc` splices
                         // are allowed in JSDoc comments.
-                        if matches!(ty, VarType::LitStr)
+                        if matches!(ty, VarType::LitStr | VarType::JsDoc)
                             || matches!(ty, VarType::Option(inner)
-                                if matches!(**inner, VarType::LitStr))
+                                if matches!(**inner, VarType::LitStr | VarType::JsDoc))
                         {
                             let placeholder = format!("__tsq_{index}__");
                             placeholders.insert(
@@ -199,7 +199,7 @@ pub(crate) mod docs {
     use winnow::token::{rest, take_until, take_while};
 
     /// A chunk of comment text.
-    #[derive(Debug, PartialEq)]
+    #[derive(Clone, Copy, Debug, PartialEq)]
     pub enum CommentSegment<'a> {
         /// Literal text between placeholders.
         Text(&'a str),

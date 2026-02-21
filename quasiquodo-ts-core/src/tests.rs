@@ -150,7 +150,7 @@ fn test_expand_dynamic_doc_comment() {
     let expected: syn::Expr = parse_quote! {{
         let quote_var_desc: &str = "hello";
         ::quasiquodo::ts::swc::ecma_ast::TsTypeElement::TsPropertySignature(::quasiquodo::ts::swc::ecma_ast::TsPropertySignature {
-            span: ::quasiquodo::ts::Comments::span_with_comment(&my_comments, format!("* {} ", quote_var_desc.clone()),),
+            span: ::quasiquodo::ts::Comments::span_with_comment(&my_comments, format!("* {} ", quote_var_desc),),
             readonly: false,
             key: Box::new(::quasiquodo::ts::swc::ecma_ast::Expr::Ident(
                 ::quasiquodo::ts::swc::ecma_ast::Ident::new_no_ctxt(
@@ -208,7 +208,7 @@ fn test_expand_jsdoc_variable() {
     let expected: syn::Expr = parse_quote! {{
         let quote_var_doc: ::quasiquodo::ts::JsDoc = my_doc;
         ::quasiquodo::ts::swc::ecma_ast::TsTypeElement::TsPropertySignature(::quasiquodo::ts::swc::ecma_ast::TsPropertySignature {
-            span: ::quasiquodo::ts::Comments::span_with_comment(&my_comments, quote_var_doc.clone().text(),),
+            span: ::quasiquodo::ts::Comments::span_with_comment(&my_comments, format!("* {} ", quote_var_doc.raw_text()),),
             readonly: false,
             key: Box::new(::quasiquodo::ts::swc::ecma_ast::Expr::Ident(
                 ::quasiquodo::ts::swc::ecma_ast::Ident::new_no_ctxt(
@@ -242,8 +242,8 @@ fn test_expand_option_jsdoc_variable() {
     let expected: syn::Expr = parse_quote! {{
         let quote_var_doc: Option<::quasiquodo::ts::JsDoc> = my_doc;
         ::quasiquodo::ts::swc::ecma_ast::TsTypeElement::TsPropertySignature(::quasiquodo::ts::swc::ecma_ast::TsPropertySignature {
-            span: match quote_var_doc.clone() {
-                Some(ref doc) => ::quasiquodo::ts::Comments::span_with_comment(&my_comments, doc.text(),),
+            span: match quote_var_doc {
+                Some(ref doc) => ::quasiquodo::ts::Comments::span_with_comment(&my_comments, format!("* {} ", doc.raw_text()),),
                 None => ::quasiquodo::ts::swc::common::DUMMY_SP,
             },
             readonly: false,
@@ -281,6 +281,115 @@ fn test_expand_jsdoc_variable_without_comments() {
         let quote_var_doc: ::quasiquodo::ts::JsDoc = my_doc;
         ::quasiquodo::ts::swc::ecma_ast::TsTypeElement::TsPropertySignature(::quasiquodo::ts::swc::ecma_ast::TsPropertySignature {
             span: ::quasiquodo::ts::swc::common::DUMMY_SP,
+            readonly: false,
+            key: Box::new(::quasiquodo::ts::swc::ecma_ast::Expr::Ident(
+                ::quasiquodo::ts::swc::ecma_ast::Ident::new_no_ctxt(
+                    ::quasiquodo::ts::swc::atoms::atom!("name"),
+                    ::quasiquodo::ts::swc::common::DUMMY_SP,
+                )
+            )),
+            computed: false,
+            optional: false,
+            type_ann: Some(Box::new(::quasiquodo::ts::swc::ecma_ast::TsTypeAnn {
+                span: ::quasiquodo::ts::swc::common::DUMMY_SP,
+                type_ann: Box::new(::quasiquodo::ts::swc::ecma_ast::TsType::TsKeywordType(
+                    ::quasiquodo::ts::swc::ecma_ast::TsKeywordType {
+                        span: ::quasiquodo::ts::swc::common::DUMMY_SP,
+                        kind: ::quasiquodo::ts::swc::ecma_ast::TsKeywordTypeKind::TsStringKeyword,
+                    }
+                )),
+            })),
+        })
+    }};
+    assert_eq!(actual, expected);
+}
+
+// MARK: `JsDoc` embedded in comment
+
+#[test]
+fn test_expand_jsdoc_embedded_in_comment() {
+    let actual = expand_expr(quote!(
+        comments = my_comments,
+        "/** See @{doc}. */ name: string" as TsTypeElement,
+        doc: JsDoc = my_doc
+    ));
+    let expected: syn::Expr = parse_quote! {{
+        let quote_var_doc: ::quasiquodo::ts::JsDoc = my_doc;
+        ::quasiquodo::ts::swc::ecma_ast::TsTypeElement::TsPropertySignature(::quasiquodo::ts::swc::ecma_ast::TsPropertySignature {
+            span: ::quasiquodo::ts::Comments::span_with_comment(&my_comments, format!("* See {}. ", quote_var_doc.raw_text()),),
+            readonly: false,
+            key: Box::new(::quasiquodo::ts::swc::ecma_ast::Expr::Ident(
+                ::quasiquodo::ts::swc::ecma_ast::Ident::new_no_ctxt(
+                    ::quasiquodo::ts::swc::atoms::atom!("name"),
+                    ::quasiquodo::ts::swc::common::DUMMY_SP,
+                )
+            )),
+            computed: false,
+            optional: false,
+            type_ann: Some(Box::new(::quasiquodo::ts::swc::ecma_ast::TsTypeAnn {
+                span: ::quasiquodo::ts::swc::common::DUMMY_SP,
+                type_ann: Box::new(::quasiquodo::ts::swc::ecma_ast::TsType::TsKeywordType(
+                    ::quasiquodo::ts::swc::ecma_ast::TsKeywordType {
+                        span: ::quasiquodo::ts::swc::common::DUMMY_SP,
+                        kind: ::quasiquodo::ts::swc::ecma_ast::TsKeywordTypeKind::TsStringKeyword,
+                    }
+                )),
+            })),
+        })
+    }};
+    assert_eq!(actual, expected);
+}
+
+#[test]
+fn test_expand_option_jsdoc_embedded_in_comment() {
+    let actual = expand_expr(quote!(
+        comments = my_comments,
+        "/** See @{doc}. */ name: string" as TsTypeElement,
+        doc: Option<JsDoc> = my_doc
+    ));
+    let expected: syn::Expr = parse_quote! {{
+        let quote_var_doc: Option<::quasiquodo::ts::JsDoc> = my_doc;
+        ::quasiquodo::ts::swc::ecma_ast::TsTypeElement::TsPropertySignature(::quasiquodo::ts::swc::ecma_ast::TsPropertySignature {
+            span: ::quasiquodo::ts::Comments::span_with_comment(&my_comments, format!("* See {}. ", quote_var_doc.as_ref().map(|d| d.raw_text()).unwrap_or_default()),),
+            readonly: false,
+            key: Box::new(::quasiquodo::ts::swc::ecma_ast::Expr::Ident(
+                ::quasiquodo::ts::swc::ecma_ast::Ident::new_no_ctxt(
+                    ::quasiquodo::ts::swc::atoms::atom!("name"),
+                    ::quasiquodo::ts::swc::common::DUMMY_SP,
+                )
+            )),
+            computed: false,
+            optional: false,
+            type_ann: Some(Box::new(::quasiquodo::ts::swc::ecma_ast::TsTypeAnn {
+                span: ::quasiquodo::ts::swc::common::DUMMY_SP,
+                type_ann: Box::new(::quasiquodo::ts::swc::ecma_ast::TsType::TsKeywordType(
+                    ::quasiquodo::ts::swc::ecma_ast::TsKeywordType {
+                        span: ::quasiquodo::ts::swc::common::DUMMY_SP,
+                        kind: ::quasiquodo::ts::swc::ecma_ast::TsKeywordTypeKind::TsStringKeyword,
+                    }
+                )),
+            })),
+        })
+    }};
+    assert_eq!(actual, expected);
+}
+
+// MARK: `Option<LitStr>` sole placeholder
+
+#[test]
+fn test_expand_option_litstr_sole_placeholder() {
+    let actual = expand_expr(quote!(
+        comments = my_comments,
+        "/** @{desc} */ name: string" as TsTypeElement,
+        desc: Option<LitStr> = my_desc
+    ));
+    let expected: syn::Expr = parse_quote! {{
+        let quote_var_desc: Option<&str> = my_desc;
+        ::quasiquodo::ts::swc::ecma_ast::TsTypeElement::TsPropertySignature(::quasiquodo::ts::swc::ecma_ast::TsPropertySignature {
+            span: match quote_var_desc {
+                Some(ref doc) => ::quasiquodo::ts::Comments::span_with_comment(&my_comments, format!("* {} ", doc),),
+                None => ::quasiquodo::ts::swc::common::DUMMY_SP,
+            },
             readonly: false,
             key: Box::new(::quasiquodo::ts::swc::ecma_ast::Expr::Ident(
                 ::quasiquodo::ts::swc::ecma_ast::Ident::new_no_ctxt(

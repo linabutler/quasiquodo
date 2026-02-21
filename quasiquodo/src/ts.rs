@@ -75,24 +75,18 @@ impl Comments {
 
 /// A pre-built JSDoc comment that can be interpolated into a
 /// `ts_quote!` invocation via the `JsDoc` variable type.
-///
-/// Stores the raw comment text between `/*` and `*/`, including
-/// the leading `* ` prefix that marks a JSDoc block comment, and
-/// any whitespace.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct JsDoc(Atom);
 
 impl JsDoc {
     /// Creates a [`JsDoc`] from a user-facing text string.
-    ///
-    /// Wraps `text` with the `* ` prefix and ` ` suffix, so that
-    /// the comment renders as `/** {text} */`.
     pub fn new(text: impl std::fmt::Display) -> Self {
-        Self(format!("* {text} ").into())
+        Self(text.to_string().into())
     }
 
-    /// Returns the raw comment text (between `/*` and `*/`).
-    pub fn text(&self) -> Atom {
+    /// Returns the comment text (between `/*` and `*/`), excluding
+    /// the leading `*` prefix that marks a JSDoc block comment.
+    pub fn raw_text(&self) -> Atom {
         self.0.clone()
     }
 }

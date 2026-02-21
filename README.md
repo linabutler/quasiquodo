@@ -207,7 +207,7 @@ This is useful for error reporting, so that diagnostics point to the right locat
 
 ### JSDoc comments
 
-`ts_quote!` understands JSDoc-style `/** ... */` comments, and supports splicing `LitStr` variables into them:
+`ts_quote!` understands JSDoc-style `/** ... */` comments, and supports splicing `LitStr` and `JsDoc` variables into them:
 
 ```rust
 let description = "The pet's name.";
@@ -262,7 +262,19 @@ export interface Pet {
 }
 ```
 
-`Option<JsDoc>` conditionally attaches a comment:
+`JsDoc` variables can also be embedded in comment text:
+
+```rust
+let doc = JsDoc::new("a pet");
+let ast = ts_quote!(
+    comments,
+    "/** This is @{doc}. */ name: string" as TsTypeElement,
+    doc: JsDoc = doc,
+);
+// => `/** This is a pet. */ name: string;`
+```
+
+`Option<JsDoc>` and `Option<LitStr>` conditionally attach comments. When the value is `None`, no comment is emitted:
 
 ```rust
 let doc: Option<JsDoc> = if include_docs {

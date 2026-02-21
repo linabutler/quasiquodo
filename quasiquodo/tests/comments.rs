@@ -342,6 +342,85 @@ fn test_comment_option_jsdoc_none() {
     );
 }
 
+// MARK: `Option<LitStr>` variable
+
+#[test]
+fn test_comment_option_litstr_some() {
+    let comments = Comments::new();
+    let desc: Option<&str> = Some("The pet's name.");
+    let elem: TsTypeElement = ts_quote!(
+        comments,
+        "/** @{desc} */ name: string" as TsTypeElement,
+        desc: Option<LitStr> = desc
+    );
+    assert_eq!(
+        to_code_with_comments(Some(&*comments), &elem),
+        "/** The pet's name. */ name: string;",
+    );
+}
+
+#[test]
+fn test_comment_option_litstr_none() {
+    let comments = Comments::new();
+    let desc: Option<&str> = None;
+    let elem: TsTypeElement = ts_quote!(
+        comments,
+        "/** @{desc} */ name: string" as TsTypeElement,
+        desc: Option<LitStr> = desc
+    );
+    assert_eq!(
+        to_code_with_comments(Some(&*comments), &elem),
+        "name: string;",
+    );
+}
+
+// MARK: `JsDoc` embedded in comment
+
+#[test]
+fn test_comment_jsdoc_embedded_with_text() {
+    let comments = Comments::new();
+    let doc = JsDoc::new("a pet");
+    let elem: TsTypeElement = ts_quote!(
+        comments,
+        "/** This is @{doc}. */ name: string" as TsTypeElement,
+        doc: JsDoc = doc
+    );
+    assert_eq!(
+        to_code_with_comments(Some(&*comments), &elem),
+        "/** This is a pet. */ name: string;",
+    );
+}
+
+#[test]
+fn test_comment_option_jsdoc_embedded_some() {
+    let comments = Comments::new();
+    let doc: Option<JsDoc> = Some(JsDoc::new("a pet"));
+    let elem: TsTypeElement = ts_quote!(
+        comments,
+        "/** This is @{doc}. */ name: string" as TsTypeElement,
+        doc: Option<JsDoc> = doc
+    );
+    assert_eq!(
+        to_code_with_comments(Some(&*comments), &elem),
+        "/** This is a pet. */ name: string;",
+    );
+}
+
+#[test]
+fn test_comment_option_jsdoc_embedded_none() {
+    let comments = Comments::new();
+    let doc: Option<JsDoc> = None;
+    let elem: TsTypeElement = ts_quote!(
+        comments,
+        "/** This is @{doc}. */ name: string" as TsTypeElement,
+        doc: Option<JsDoc> = doc
+    );
+    assert_eq!(
+        to_code_with_comments(Some(&*comments), &elem),
+        "/** This is . */ name: string;",
+    );
+}
+
 // MARK: Multi-level JSDoc nesting
 
 #[test]

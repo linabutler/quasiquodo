@@ -6,7 +6,7 @@ use swc_ecma_ast::*;
 use syn::parse_quote;
 
 use crate::{
-    context::Context,
+    context::{Context, UnboundVar, VarData},
     input::VarType,
     lexer::docs::{self, CommentSegment},
     lift::unsplice,
@@ -16,9 +16,8 @@ use super::{CodeFragment, Lift, impl_lift_for_newtype_enum, impl_lift_for_struct
 
 impl Lift for swc_common::Span {
     fn lift(&self, context: &Context) -> syn::Result<CodeFragment> {
-        let expr = match context
-            .take_closest_doc_to(self.lo)
-            .and_then(|comment| context.comments().map(|expr| (expr, comment)))
+        let comment = context.take_closest_doc_to(self.lo);
+        let expr = match comment.and_then(|comment| context.comments().map(|expr| (expr, comment)))
         {
             // If this span has an attached JSDoc comment, and we can save it in
             // `comments`, emit a `comments.span_with_comment(...)` expression.
@@ -26,101 +25,101 @@ impl Lift for swc_common::Span {
                 let text = &*comment.text;
                 let segments = docs::segments(text);
 
-                match segments.iter().find_map(|s| match s {
-                    CommentSegment::Placeholder(p) => {
-                        context.placeholder(p).filter(|var| match &var.ty {
-                            VarType::JsDoc => true,
-                            VarType::Option(inner) => matches!(**inner, VarType::JsDoc),
-                            _ => false,
-                        })
-                    }
-                    _ => None,
-                }) {
-                    // A `JsDoc` or `Option<JsDoc>` variable.
-                    Some(var) => {
-                        let var_ident = var.to_tokens();
-                        match &var.ty {
-                            VarType::Option(inner) if matches!(**inner, VarType::JsDoc) => {
-                                // For `Option<JsDoc>`, only attach a comment
-                                // for `Some`; ignore `None`.
-                                let fallback = context.span();
-                                parse_quote!(
-                                    match #var_ident {
-                                        Some(ref doc) => ::quasiquodo::ts::Comments::span_with_comment(
-                                            &#expr,
-                                            doc.text(),
-                                        ),
-                                        None => #fallback,
-                                    }
-                                )
+                // Build a format string, with `{}` placeholders for each
+                // variable placeholder, and collect the corresponding
+                // bound variables for them.
+                let mut format_str = String::new();
+                let mut vars = vec![];
+                for &segment in &segments {
+                    match segment {
+                        CommentSegment::Text(t) => format_str.push_str(t),
+                        CommentSegment::Placeholder(p) => match context.placeholder(p) {
+                            Some(var) => {
+                                format_str.push_str("{}");
+                                vars.push(var);
                             }
-                            _ => parse_quote!(
-                                ::quasiquodo::ts::Comments::span_with_comment(
-                                    &#expr,
-                                    #var_ident.text(),
-                                )
-                            ),
-                        }
+                            None => {
+                                return Err(syn::Error::new(
+                                    Span::call_site(),
+                                    UnboundVar(p.to_owned()),
+                                ));
+                            }
+                        },
                     }
-                    None => {
-                        if segments
+                }
+
+                match &*vars {
+                    // Static comment without placeholders; use the text as-is.
+                    [] => {
+                        parse_quote!(
+                            ::quasiquodo::ts::Comments::span_with_comment(
+                                &#expr,
+                                #text,
+                            )
+                        )
+                    }
+                    // A single `Option<LitStr | JsDoc>` variable uses the text
+                    // if `Some`, or removes the entire comment if `None`.
+                    [
+                        VarData {
+                            ident,
+                            ty: VarType::Option(ty),
+                        },
+                    ] if {
+                        segments
                             .iter()
-                            .any(|s| matches!(s, CommentSegment::Placeholder(_)))
-                        {
-                            // For segments with placeholders, build a
-                            // dynamic `format!(...)` string, interpolating
-                            // the values of the corresponding variables.
-                            let mut format_str = String::new();
-                            let mut format_args: Vec<syn::Expr> = Vec::new();
-                            for segment in segments {
-                                match segment {
-                                    CommentSegment::Text(t) => format_str.push_str(t),
-                                    CommentSegment::Placeholder(p) => {
-                                        match context.placeholder(p) {
-                                            // Emit format string placeholders and
-                                            // arguments for bound variables.
-                                            Some(var) => {
-                                                let var_ident = var.to_tokens();
-                                                let arg = match &var.ty {
-                                                    VarType::Option(inner)
-                                                        if matches!(**inner, VarType::LitStr) =>
-                                                    {
-                                                        // For `Option<LitStr>`, substitute
-                                                        // an empty string for `None`.
-                                                        parse_quote!(#var_ident.unwrap_or_default())
-                                                    }
-                                                    _ => parse_quote!(#var_ident),
-                                                };
-                                                format_str.push_str("{}");
-                                                format_args.push(arg);
-                                            }
-                                            // Unbound variable; insert the placeholder as-is.
-                                            None => format_str.push_str(p),
-                                        }
-                                    }
-                                }
+                            .filter_map(|segment| match segment {
+                                CommentSegment::Text(t) => Some(t.trim()),
+                                _ => None,
+                            })
+                            .all(|t| t.is_empty() || t == "*")
+                    } =>
+                    {
+                        let fallback = context.span();
+                        let format_arg: syn::Expr = match ty.inner() {
+                            VarType::JsDoc => parse_quote!(doc.raw_text()),
+                            _ => parse_quote!(doc),
+                        };
+                        parse_quote!(
+                            match #ident {
+                                Some(ref doc) => ::quasiquodo::ts::Comments::span_with_comment(
+                                    &#expr,
+                                    format!(#format_str, #format_arg),
+                                ),
+                                None => #fallback,
                             }
-                            parse_quote!(
-                                ::quasiquodo::ts::Comments::span_with_comment(
-                                    &#expr,
-                                    format!(#format_str, #(#format_args),*),
-                                )
+                        )
+                    }
+                    // Other combinations of embedded placeholders produce a
+                    // `format!` expression, with bound variables as arguments.
+                    other => {
+                        let format_args = other.iter().map(|VarData { ident, ty }| -> syn::Expr {
+                            match ty {
+                                VarType::JsDoc => parse_quote!(#ident.raw_text()),
+                                VarType::Option(inner) if matches!(**inner, VarType::LitStr) => {
+                                    parse_quote!(#ident.unwrap_or_default())
+                                }
+                                VarType::Option(inner) if matches!(**inner, VarType::JsDoc) => {
+                                    parse_quote!(
+                                        #ident
+                                            .as_ref()
+                                            .map(|d| d.raw_text())
+                                            .unwrap_or_default()
+                                    )
+                                }
+                                _ => parse_quote!(#ident),
+                            }
+                        });
+                        parse_quote!(
+                            ::quasiquodo::ts::Comments::span_with_comment(
+                                &#expr,
+                                format!(#format_str, #(#format_args),*),
                             )
-                        } else {
-                            // For static comments, or comments with placeholders
-                            // that aren't bound to variables, just use the text.
-                            parse_quote!(
-                                ::quasiquodo::ts::Comments::span_with_comment(
-                                    &#expr,
-                                    #text,
-                                )
-                            )
-                        }
+                        )
                     }
                 }
             }
-            // No `comments` argument, so nowhere to save the comment;
-            // discard it.
+            // No `comments`, so nowhere to save the comment; discard it.
             None => context.span(),
         };
         Ok(CodeFragment::Single(expr))
