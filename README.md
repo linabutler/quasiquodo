@@ -2,6 +2,10 @@
 
 **Compile-time TypeScript quasi-quoting for Rust.**
 
+[<img src="https://img.shields.io/crates/v/quasiquodo?style=for-the-badge&logo=rust" alt="crates.io" height="24">](https://crates.io/crates/quasiquodo)
+[<img src="https://img.shields.io/github/actions/workflow/status/linabutler/quasiquodo/test.yml?style=for-the-badge&logo=github" alt="Build status" height="24">](https://github.com/linabutler/quasiquodo/actions?query=branch%3Amain)
+[<img src="https://img.shields.io/docsrs/quasiquodo/latest?style=for-the-badge&logo=docs.rs" alt="Documentation" height="24">](https://docs.rs/quasiquodo)
+
 Quasiquodo is a Rust macro that turns inline TypeScript into correct-by-construction syntax trees, giving you TypeScript ergonomics with compile-time safety.
 
 Instead of writing:
