@@ -73,6 +73,7 @@ pub(crate) fn preprocess(
                         let placeholder = format!("__tsq_{index}__");
                         let replacement = match ty.inner() {
                             VarType::LitStr => format!(r#""{placeholder}""#),
+                            VarType::JsDoc => format!("/** {placeholder} */"),
                             _ => placeholder.clone(),
                         };
                         placeholders.insert(

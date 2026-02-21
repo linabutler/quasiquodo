@@ -250,6 +250,79 @@ let code = to_code_with_comments(Some(&*comments), &ast);
 // => `/** The pet's name is required. */ name: string;`
 ```
 
+For more complex uses, `ts_quote!` supports `JsDoc` variables for attaching pre-built JSDoc comments to nodes. `JsDoc::new()` automatically wraps your text in `/** ... */` delimiters, and each substituted `JsDoc` variable attaches the comment to the next syntax tree node:
+
+```rust
+use quasiquodo::ts::{Comments, JsDoc};
+use swc_ecma_codegen::to_code_with_comments;
+
+let comments = Comments::new();
+let doc = JsDoc::new("The pet's name.");
+let ast = ts_quote!(
+    comments,
+    "export interface Pet { $doc name: string; }" as ModuleItem,
+    doc: JsDoc = doc,
+);
+
+let code = to_code_with_comments(Some(&*comments), &ast);
+```
+
+This produces:
+
+```typescript
+export interface Pet {
+    /** The pet's name. */ name: string;
+}
+```
+
+`Option<JsDoc>` conditionally attaches a comment:
+
+```rust
+let doc: Option<JsDoc> = if include_docs {
+    Some(JsDoc::new("The pet's name."))
+} else {
+    None
+};
+
+let ast = ts_quote!(
+    comments,
+    "$doc name: string" as TsTypeElement,
+    doc: Option<JsDoc> = doc,
+);
+// Either `/** The pet's name. */ name: string;` or
+// `name: string;`, depending on `doc`.
+```
+
+Comments attached with `JsDoc` variables support splicing through multiple levels of `ts_quote!`, so you can build a documented member first, then splice it into a larger structure:
+
+```rust
+let comments = Comments::new();
+let doc = JsDoc::new("The pet's name.");
+
+// Attach the comment to a member...
+let member: ClassMember = ts_quote!(
+    comments,
+    "$doc name: string" as ClassMember,
+    doc: JsDoc = doc,
+);
+
+// ...then splice the member into a class.
+let class: Stmt = ts_quote!(
+    "class Pet { $m }" as Stmt,
+    m: ClassMember = member,
+);
+
+let code = to_code_with_comments(Some(&*comments), &class);
+```
+
+This produces:
+
+```typescript
+class Pet {
+    /** The pet's name. */ name: string;
+}
+```
+
 ## Reference
 
 ### Output kinds
@@ -290,6 +363,7 @@ Variables declared with `$binding` can have scalar, boxed, or container types.
 | `ImportSpecifier` | `ImportSpecifier` | An import specifier |
 | `ExportSpecifier` | `ExportSpecifier` | An export specifier |
 | `Decl` | `Decl` | A declaration |
+| `JsDoc` | `JsDoc` | A pre-built JSDoc comment |
 | `LitStr` | `&str` | A string literal value |
 | `LitNum` | `f64` | A numeric literal value |
 | `LitBool` | `bool` | A boolean literal value |

@@ -199,6 +199,9 @@ pub enum VarType {
     Ident,
     /// Substitutes an `ImportSpecifier` in an import declaration.
     ImportSpecifier,
+    /// Substitutes a JSDoc comment, attaching it as a leading comment
+    /// on the next node.
+    JsDoc,
     /// Substitutes a [`bool`] value as a `TsLit::Bool` literal.
     LitBool,
     /// Substitutes an [`f64`] value as a `TsLit::Number` literal.
@@ -252,6 +255,7 @@ impl Parse for VarType {
             "ExportSpecifier" => Ok(Self::ExportSpecifier),
             "Ident" => Ok(Self::Ident),
             "ImportSpecifier" => Ok(Self::ImportSpecifier),
+            "JsDoc" => Ok(Self::JsDoc),
             "LitBool" => Ok(Self::LitBool),
             "LitNum" => Ok(Self::LitNum),
             "LitStr" => Ok(Self::LitStr),
@@ -283,10 +287,10 @@ impl Parse for VarType {
                 format!(
                     "unsupported variable type `{other}`; expected one of \
                      `ClassMember`, `Decl`, `Expr`, `ExportSpecifier`, \
-                     `Ident`, `ImportSpecifier`, `LitBool`, `LitNum`, \
-                     `LitStr`, `Param`, `ParamOrTsParamProp`, `Stmt`, \
-                     `TsType`, `TsTypeElement`, `Box<...>`, `Option<...>`, \
-                     `Vec<...>`"
+                     `Ident`, `ImportSpecifier`, `JsDoc`, `LitBool`, \
+                     `LitNum`, `LitStr`, `Param`, `ParamOrTsParamProp`, \
+                     `Stmt`, `TsType`, `TsTypeElement`, `Box<...>`, \
+                     `Option<...>`, `Vec<...>`"
                 ),
             )),
         }
@@ -308,6 +312,7 @@ impl ToTokens for VarTypeToTokens<'_> {
             VarType::ImportSpecifier => {
                 quote!(::quasiquodo::ts::swc::ecma_ast::ImportSpecifier)
             }
+            VarType::JsDoc => quote!(::quasiquodo::ts::JsDoc),
             VarType::LitBool => quote!(bool),
             VarType::LitNum => quote!(f64),
             VarType::LitStr => quote!(&str),
@@ -626,6 +631,21 @@ mod tests {
         assert!(matches!(
             vt,
             VarType::Option(ref inner) if matches!(**inner, VarType::Decl)
+        ));
+    }
+
+    #[test]
+    fn test_parse_var_type_jsdoc() {
+        let vt: VarType = parse_str("JsDoc").unwrap();
+        assert!(matches!(vt, VarType::JsDoc));
+    }
+
+    #[test]
+    fn test_parse_var_type_option_jsdoc() {
+        let vt: VarType = parse_str("Option<JsDoc>").unwrap();
+        assert!(matches!(
+            vt,
+            VarType::Option(ref inner) if matches!(**inner, VarType::JsDoc)
         ));
     }
 }

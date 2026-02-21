@@ -196,6 +196,114 @@ fn test_expand_import_specifier_named() {
     assert_eq!(actual, expected);
 }
 
+// MARK: `JsDoc` variable
+
+#[test]
+fn test_expand_jsdoc_variable() {
+    let actual = expand_expr(quote!(
+        comments = my_comments,
+        "$doc name: string" as TsTypeElement,
+        doc: JsDoc = my_doc
+    ));
+    let expected: syn::Expr = parse_quote! {{
+        let quote_var_doc: ::quasiquodo::ts::JsDoc = my_doc;
+        ::quasiquodo::ts::swc::ecma_ast::TsTypeElement::TsPropertySignature(::quasiquodo::ts::swc::ecma_ast::TsPropertySignature {
+            span: ::quasiquodo::ts::Comments::span_with_comment(&my_comments, quote_var_doc.clone().text(),),
+            readonly: false,
+            key: Box::new(::quasiquodo::ts::swc::ecma_ast::Expr::Ident(
+                ::quasiquodo::ts::swc::ecma_ast::Ident::new_no_ctxt(
+                    ::quasiquodo::ts::swc::atoms::atom!("name"),
+                    ::quasiquodo::ts::swc::common::DUMMY_SP,
+                )
+            )),
+            computed: false,
+            optional: false,
+            type_ann: Some(Box::new(::quasiquodo::ts::swc::ecma_ast::TsTypeAnn {
+                span: ::quasiquodo::ts::swc::common::DUMMY_SP,
+                type_ann: Box::new(::quasiquodo::ts::swc::ecma_ast::TsType::TsKeywordType(
+                    ::quasiquodo::ts::swc::ecma_ast::TsKeywordType {
+                        span: ::quasiquodo::ts::swc::common::DUMMY_SP,
+                        kind: ::quasiquodo::ts::swc::ecma_ast::TsKeywordTypeKind::TsStringKeyword,
+                    }
+                )),
+            })),
+        })
+    }};
+    assert_eq!(actual, expected);
+}
+
+#[test]
+fn test_expand_option_jsdoc_variable() {
+    let actual = expand_expr(quote!(
+        comments = my_comments,
+        "$doc name: string" as TsTypeElement,
+        doc: Option<JsDoc> = my_doc
+    ));
+    let expected: syn::Expr = parse_quote! {{
+        let quote_var_doc: Option<::quasiquodo::ts::JsDoc> = my_doc;
+        ::quasiquodo::ts::swc::ecma_ast::TsTypeElement::TsPropertySignature(::quasiquodo::ts::swc::ecma_ast::TsPropertySignature {
+            span: match quote_var_doc.clone() {
+                Some(ref doc) => ::quasiquodo::ts::Comments::span_with_comment(&my_comments, doc.text(),),
+                None => ::quasiquodo::ts::swc::common::DUMMY_SP,
+            },
+            readonly: false,
+            key: Box::new(::quasiquodo::ts::swc::ecma_ast::Expr::Ident(
+                ::quasiquodo::ts::swc::ecma_ast::Ident::new_no_ctxt(
+                    ::quasiquodo::ts::swc::atoms::atom!("name"),
+                    ::quasiquodo::ts::swc::common::DUMMY_SP,
+                )
+            )),
+            computed: false,
+            optional: false,
+            type_ann: Some(Box::new(::quasiquodo::ts::swc::ecma_ast::TsTypeAnn {
+                span: ::quasiquodo::ts::swc::common::DUMMY_SP,
+                type_ann: Box::new(::quasiquodo::ts::swc::ecma_ast::TsType::TsKeywordType(
+                    ::quasiquodo::ts::swc::ecma_ast::TsKeywordType {
+                        span: ::quasiquodo::ts::swc::common::DUMMY_SP,
+                        kind: ::quasiquodo::ts::swc::ecma_ast::TsKeywordTypeKind::TsStringKeyword,
+                    }
+                )),
+            })),
+        })
+    }};
+    assert_eq!(actual, expected);
+}
+
+#[test]
+fn test_expand_jsdoc_variable_without_comments() {
+    // Without a `comments` argument to collect them, `JsDoc` variables
+    // become dummy spans, effectively dropping them.
+    let actual = expand_expr(quote!(
+        "$doc name: string" as TsTypeElement,
+        doc: JsDoc = my_doc
+    ));
+    let expected: syn::Expr = parse_quote! {{
+        let quote_var_doc: ::quasiquodo::ts::JsDoc = my_doc;
+        ::quasiquodo::ts::swc::ecma_ast::TsTypeElement::TsPropertySignature(::quasiquodo::ts::swc::ecma_ast::TsPropertySignature {
+            span: ::quasiquodo::ts::swc::common::DUMMY_SP,
+            readonly: false,
+            key: Box::new(::quasiquodo::ts::swc::ecma_ast::Expr::Ident(
+                ::quasiquodo::ts::swc::ecma_ast::Ident::new_no_ctxt(
+                    ::quasiquodo::ts::swc::atoms::atom!("name"),
+                    ::quasiquodo::ts::swc::common::DUMMY_SP,
+                )
+            )),
+            computed: false,
+            optional: false,
+            type_ann: Some(Box::new(::quasiquodo::ts::swc::ecma_ast::TsTypeAnn {
+                span: ::quasiquodo::ts::swc::common::DUMMY_SP,
+                type_ann: Box::new(::quasiquodo::ts::swc::ecma_ast::TsType::TsKeywordType(
+                    ::quasiquodo::ts::swc::ecma_ast::TsKeywordType {
+                        span: ::quasiquodo::ts::swc::common::DUMMY_SP,
+                        kind: ::quasiquodo::ts::swc::ecma_ast::TsKeywordTypeKind::TsStringKeyword,
+                    }
+                )),
+            })),
+        })
+    }};
+    assert_eq!(actual, expected);
+}
+
 #[test]
 fn test_expand_import_specifier_with_ident_variable() {
     let actual = expand_expr(quote!(

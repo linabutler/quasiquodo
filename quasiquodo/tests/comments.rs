@@ -1,5 +1,5 @@
 use indoc::indoc;
-use quasiquodo::ts::Comments;
+use quasiquodo::ts::{Comments, JsDoc};
 use quasiquodo::ts_quote;
 use swc_ecma_ast::*;
 use swc_ecma_codegen::to_code_with_comments;
@@ -261,6 +261,175 @@ fn test_comment_escape_and_variable_in_jsdoc() {
     assert_eq!(
         to_code_with_comments(Some(&*comments), &elem),
         "/** The $ref name. */ value: string;",
+    );
+}
+
+// MARK: `JsDoc` variable
+
+#[test]
+fn test_comment_jsdoc_variable_on_type_element() {
+    let comments = Comments::new();
+    let doc = JsDoc::new("The pet's name.");
+    let elem: TsTypeElement = ts_quote!(
+        comments,
+        "$doc name: string" as TsTypeElement,
+        doc: JsDoc = doc
+    );
+    assert_eq!(
+        to_code_with_comments(Some(&*comments), &elem),
+        "/** The pet's name. */ name: string;",
+    );
+}
+
+#[test]
+fn test_comment_jsdoc_variable_on_interface_member() {
+    let comments = Comments::new();
+    let doc = JsDoc::new("The pet's name.");
+    let ast = ts_quote!(
+        comments,
+        "export interface Pet { $doc name: string; }" as ModuleItem,
+        doc: JsDoc = doc
+    );
+    assert_eq!(
+        to_code_with_comments(Some(&*comments), &ast),
+        indoc! {"
+            export interface Pet {
+                /** The pet's name. */ name: string;
+            }
+        "},
+    );
+}
+
+#[test]
+fn test_comment_jsdoc_variable_on_class_member() {
+    let comments = Comments::new();
+    let doc = JsDoc::new("The pet's name.");
+    let stmt: Stmt = ts_quote!(
+        comments,
+        "class Pet { $doc name: string; }" as Stmt,
+        doc: JsDoc = doc
+    );
+    assert_eq!(
+        to_code_with_comments(Some(&*comments), &stmt),
+        indoc! {"
+            class Pet {
+                /** The pet's name. */ name: string;
+            }
+        "},
+    );
+}
+
+#[test]
+fn test_comment_jsdoc_variable_spliced_member() {
+    let comments = Comments::new();
+    let doc = JsDoc::new("The pet's name.");
+    let member: TsTypeElement = ts_quote!(
+        comments,
+        "$doc name: string" as TsTypeElement,
+        doc: JsDoc = doc
+    );
+    let ast = ts_quote!(
+        "export interface Pet { $m; }" as ModuleItem,
+        m: TsTypeElement = member
+    );
+    assert_eq!(
+        to_code_with_comments(Some(&*comments), &ast),
+        indoc! {"
+            export interface Pet {
+                /** The pet's name. */ name: string;
+            }
+        "},
+    );
+}
+
+// MARK: `Option<JsDoc>` variable
+
+#[test]
+fn test_comment_option_jsdoc_some() {
+    let comments = Comments::new();
+    let doc = Some(JsDoc::new("The pet's name."));
+    let elem: TsTypeElement = ts_quote!(
+        comments,
+        "$doc name: string" as TsTypeElement,
+        doc: Option<JsDoc> = doc
+    );
+    assert_eq!(
+        to_code_with_comments(Some(&*comments), &elem),
+        "/** The pet's name. */ name: string;",
+    );
+}
+
+#[test]
+fn test_comment_option_jsdoc_none() {
+    let comments = Comments::new();
+    let doc: Option<JsDoc> = None;
+    let elem: TsTypeElement = ts_quote!(
+        comments,
+        "$doc name: string" as TsTypeElement,
+        doc: Option<JsDoc> = doc
+    );
+    assert_eq!(
+        to_code_with_comments(Some(&*comments), &elem),
+        "name: string;",
+    );
+}
+
+// MARK: Multi-level JSDoc nesting
+
+#[test]
+fn test_comment_jsdoc_survives_multi_level_splice() {
+    // Level 1: attach a `JsDoc` to a `ClassMember`.
+    // Level 2: splice that member into a class `Stmt`.
+    // Level 3: splice the class into a block `Stmt`.
+    // The comment should survive all three levels.
+    let comments = Comments::new();
+    let doc = JsDoc::new("The pet's name.");
+    let member: ClassMember = ts_quote!(
+        comments,
+        "$doc name: string" as ClassMember,
+        doc: JsDoc = doc
+    );
+    let class: Stmt = ts_quote!(
+        "class Pet { $m }" as Stmt,
+        m: ClassMember = member
+    );
+    let block: Stmt = ts_quote!(
+        "{ $s }" as Stmt,
+        s: Stmt = class
+    );
+    assert_eq!(
+        to_code_with_comments(Some(&*comments), &block),
+        indoc! {"{
+            class Pet {
+                /** The pet's name. */ name: string;
+            }
+        }"},
+    );
+}
+
+#[test]
+fn test_comment_jsdoc_coexists_with_outer_comment() {
+    // Inner `JsDoc` on a member, outer static comment on the interface.
+    // Both should appear in the output.
+    let comments = Comments::new();
+    let doc = JsDoc::new("The name.");
+    let member: TsTypeElement = ts_quote!(
+        comments,
+        "$doc name: string" as TsTypeElement,
+        doc: JsDoc = doc
+    );
+    let ast = ts_quote!(
+        comments,
+        "/** A pet. */ export interface Pet { $m; }" as ModuleItem,
+        m: TsTypeElement = member
+    );
+    assert_eq!(
+        to_code_with_comments(Some(&*comments), &ast),
+        indoc! {"
+            /** A pet. */ export interface Pet {
+                /** The name. */ name: string;
+            }
+        "},
     );
 }
 
