@@ -551,7 +551,7 @@ dependencies = [
 
 [[package]]
 name = "quasiquodo"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "indoc",
  "num-bigint",
@@ -565,7 +565,7 @@ dependencies = [
 
 [[package]]
 name = "quasiquodo-ts-core"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "heck",
  "num-bigint",
@@ -584,7 +584,7 @@ dependencies = [
 
 [[package]]
 name = "quasiquodo-ts-macros"
-version = "0.1.1"
+version = "0.2.0"
 dependencies = [
  "quasiquodo-ts-core",
 ]

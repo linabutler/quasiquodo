@@ -3,7 +3,7 @@ members = ["quasiquodo", "quasiquodo-ts-core", "quasiquodo-ts-macros"]
 resolver = "2"
 
 [workspace.package]
-version = "0.1.1"
+version = "0.2.0"
 license = "Apache-2.0"
 edition = "2024"
 repository = "https://github.com/linabutler/quasiquodo"
@@ -12,9 +12,9 @@ rust-version = "1.89"
 
 [workspace.dependencies]
 num-bigint = "0.4"
-quasiquodo = { path = "quasiquodo", version = "0.1.1" }
-quasiquodo-ts-core = { path = "quasiquodo-ts-core", version = "0.1.1" }
-quasiquodo-ts-macros = { path = "quasiquodo-ts-macros", version = "0.1.1" }
+quasiquodo = { path = "quasiquodo", version = "0.2.0" }
+quasiquodo-ts-core = { path = "quasiquodo-ts-core", version = "0.2.0" }
+quasiquodo-ts-macros = { path = "quasiquodo-ts-macros", version = "0.2.0" }
 swc_atoms = "=9.0.0"
 swc_common = "=18.0.1"
 swc_ecma_ast = "=20.0.1"
