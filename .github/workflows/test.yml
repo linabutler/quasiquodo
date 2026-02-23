@@ -112,6 +112,11 @@ jobs:
               - quasiquodo-ts
               - quasiquodo-ts-core
               - quasiquodo-ts-macros
+          - rust: "1.91.0"
+            packages:
+              - quasiquodo-py
+              - quasiquodo-py-core
+              - quasiquodo-py-macros
     env:
       PACKAGES: ${{ matrix.packages && format('--package {0}', join(matrix.packages, ' --package ')) || '' }}
     steps:

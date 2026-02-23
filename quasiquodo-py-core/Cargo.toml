@@ -1,0 +1,29 @@
+[package]
+name = "quasiquodo-py-core"
+description = "Implementations of Quasiquodo's Python macros"
+publish = false
+rust-version = "1.91"
+version.workspace = true
+license.workspace = true
+edition.workspace = true
+repository.workspace = true
+
+[dependencies]
+proc-macro2 = "1"
+quote = "1"
+ruff_python_ast = { git = "https://github.com/astral-sh/ruff", tag = "0.15.2", features = [
+    "get-size",
+] }
+ruff_python_parser = { git = "https://github.com/astral-sh/ruff", tag = "0.15.2" }
+ruff_text_size = { git = "https://github.com/astral-sh/ruff", tag = "0.15.2" }
+syn = { version = "2", features = ["full"] }
+logos = "0.14"
+thiserror = "2"
+unicode-ident = "1"
+winnow = "0.7"
+
+[dev-dependencies]
+syn = { version = "2", features = ["extra-traits"] }
+
+[lints]
+workspace = true

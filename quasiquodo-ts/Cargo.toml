@@ -1,12 +1,12 @@
 [package]
 name = "quasiquodo-ts"
 description = "Compile-time TypeScript quasi-quoting"
+rust-version = "1.89"
+keywords = ["ast", "macros", "quote", "swc", "typescript"]
 version.workspace = true
 license.workspace = true
 edition.workspace = true
 repository.workspace = true
-keywords.workspace = true
-rust-version.workspace = true
 
 [dependencies]
 num-bigint = { workspace = true }

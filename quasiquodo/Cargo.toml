@@ -1,12 +1,11 @@
 [package]
 name = "quasiquodo"
 description = "Compile-time quasi-quoting for typed languages"
+keywords = ["ast", "macros", "python", "quote", "typescript"]
 version.workspace = true
 license.workspace = true
 edition.workspace = true
 repository.workspace = true
-keywords.workspace = true
-rust-version.workspace = true
 
 [features]
 default = ["ts"]

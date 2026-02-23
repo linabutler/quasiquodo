@@ -1,7 +1,8 @@
 [package]
-name = "quasiquodo-ts-macros"
-description = "Proc macro shims for Quasiquodo's TypeScript macros"
-rust-version = "1.89"
+name = "quasiquodo-py-macros"
+description = "Proc macro shims for Quasiquodo's Python macros"
+publish = false
+rust-version = "1.91"
 version.workspace = true
 license.workspace = true
 edition.workspace = true
@@ -11,7 +12,7 @@ repository.workspace = true
 proc-macro = true
 
 [dependencies]
-quasiquodo-ts-core.workspace = true
+quasiquodo-py-core.workspace = true
 
 [lints]
 workspace = true

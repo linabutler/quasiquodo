@@ -11,3 +11,6 @@ updates:
       swc:
         patterns:
           - "swc_*"
+      ruff:
+        patterns:
+          - "ruff_*"

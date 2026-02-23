@@ -1,6 +1,9 @@
 [workspace]
 members = [
     "quasiquodo",
+    "quasiquodo-py",
+    "quasiquodo-py-core",
+    "quasiquodo-py-macros",
     "quasiquodo-ts",
     "quasiquodo-ts-core",
     "quasiquodo-ts-macros",
@@ -12,12 +15,12 @@ version = "0.4.1"
 license = "Apache-2.0"
 edition = "2024"
 repository = "https://github.com/linabutler/quasiquodo"
-keywords = ["ast", "macros", "quote", "typescript"]
-rust-version = "1.89"
 
 [workspace.dependencies]
 num-bigint = "0.4"
 quasiquodo = { path = "quasiquodo", version = "0.4.1" }
+quasiquodo-py-core = { path = "quasiquodo-py-core", version = "0.4.1" }
+quasiquodo-py-macros = { path = "quasiquodo-py-macros", version = "0.4.1" }
 quasiquodo-ts = { path = "quasiquodo-ts", version = "0.4.1" }
 quasiquodo-ts-core = { path = "quasiquodo-ts-core", version = "0.4.1" }
 quasiquodo-ts-macros = { path = "quasiquodo-ts-macros", version = "0.4.1" }
@@ -27,6 +30,9 @@ swc_ecma_ast = "=21.0.0"
 swc_ecma_codegen = "=24.0.0"
 swc_ecma_parser = { version = "=35.0.0", features = ["unstable"] }
 swc_ecma_utils = "=27.0.0"
+# We don't list Ruff dependencies here, because Dependabot doesn't support
+# updating Git dependencies in Cargo workspace manifests yet
+# (https://github.com/dependabot/dependabot-core/issues/13219).
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
