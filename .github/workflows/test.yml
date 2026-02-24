@@ -71,7 +71,7 @@ jobs:
         env:
           RUSTC_WRAPPER: sccache
         run: |
-          cargo build --workspace --all-targets
+          cargo build --workspace --all-targets --all-features
 
       - name: Cache Cargo packages and metadata
         uses: actions/cache/save@v4
@@ -96,19 +96,23 @@ jobs:
           RUSTC_WRAPPER: sccache
           SCCACHE_LOCAL_RW_MODE: READ_ONLY
         run: |
-          cargo test --workspace --no-fail-fast --all-features
+          cargo test --workspace --all-features --no-fail-fast
 
-  test-msrv:
-    name: Test on minimum supported Rust version
+  msrv:
+    name: Build and test on minimum supported Rust version
     needs: [test]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         include:
-          - name: workspace
-            rust: "1.89.0"
-            packages: --workspace
+          - rust: "1.89.0"
+            packages:
+              - quasiquodo
+              - quasiquodo-ts-core
+              - quasiquodo-ts-macros
+    env:
+      PACKAGES: ${{ matrix.packages && format('--package {0}', join(matrix.packages, ' --package ')) || '' }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -135,22 +139,31 @@ jobs:
 
       - uses: mozilla-actions/sccache-action@65101d47ea8028ed0c98a1cdea8dd9182e9b5133 # v0.0.8
 
+      - name: Prepare build cache key
+        shell: bash
+        env:
+          MATRIX_PACKAGES: ${{ toJSON(matrix.packages) }}
+        run: |
+          echo "$MATRIX_PACKAGES" > "$GITHUB_WORKSPACE/build-cache-key"
+
       - name: Restore build cache
         uses: actions/cache/restore@v4
         id: restore-sccache
         with:
           path: ${{ env.SCCACHE_DIR }}
-          key: sccache-${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock') }}
+          # In `hashFiles`, paths starting with `/` refer to the workspace root,
+          # not the filesystem root.
+          key: sccache-${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock', '/build-cache-key') }}
           restore-keys: |
             sccache-${{ matrix.rust }}-
 
-      - name: Run tests
+      - name: Build all tests
         shell: bash
         env:
           RUSTUP_TOOLCHAIN: ${{ matrix.rust }}
           RUSTC_WRAPPER: sccache
         run: |
-          cargo test ${{ matrix.packages }} --no-fail-fast --all-features
+          cargo test $PACKAGES --all-features --no-run
 
       - name: Cache build products
         uses: actions/cache/save@v4
@@ -158,3 +171,12 @@ jobs:
         with:
           path: ${{ env.SCCACHE_DIR }}
           key: ${{ steps.restore-sccache.outputs.cache-primary-key }}
+
+      - name: Run tests
+        shell: bash
+        env:
+          RUSTUP_TOOLCHAIN: ${{ matrix.rust }}
+          RUSTC_WRAPPER: sccache
+          SCCACHE_LOCAL_RW_MODE: READ_ONLY
+        run: |
+          cargo test $PACKAGES --all-features --no-fail-fast
