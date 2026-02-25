@@ -32,16 +32,16 @@ fn test_comment_static_on_method() {
     );
 }
 
-// MARK: Dynamic JSDoc with `LitStr`
+// MARK: Dynamic JSDoc with `&str`
 
 #[test]
-fn test_comment_dynamic_litstr() {
+fn test_comment_dynamic_str() {
     let comments = Comments::new();
     let description = "The pet's name.";
     let elem: TsTypeElement = ts_quote!(
         comments,
         "/** #{desc} */ name: string" as TsTypeElement,
-        desc: LitStr = description
+        desc: &str = description
     );
     assert_eq!(
         to_code_with_comments(Some(&*comments), &elem),
@@ -57,12 +57,29 @@ fn test_comment_dynamic_multiple_placeholders() {
     let elem: TsTypeElement = ts_quote!(
         comments,
         "/** The #{noun} is #{adj}. */ name: string" as TsTypeElement,
-        noun: LitStr = noun,
-        adj: LitStr = adj
+        noun: &str = noun,
+        adj: &str = adj
     );
     assert_eq!(
         to_code_with_comments(Some(&*comments), &elem),
         "/** The name is required. */ name: string;",
+    );
+}
+
+// MARK: Dynamic JSDoc with `String`
+
+#[test]
+fn test_comment_dynamic_string() {
+    let comments = Comments::new();
+    let description = "The pet's name.".to_owned();
+    let elem: TsTypeElement = ts_quote!(
+        comments,
+        "/** #{desc} */ name: string" as TsTypeElement,
+        desc: String = description
+    );
+    assert_eq!(
+        to_code_with_comments(Some(&*comments), &elem),
+        "/** The pet's name. */ name: string;",
     );
 }
 
@@ -146,7 +163,7 @@ fn test_comment_dynamic_on_interface_member() {
     let ast = ts_quote!(
         comments,
         "export interface Pet { /** #{desc} */ name: string; }" as ModuleItem,
-        desc: LitStr = desc
+        desc: &str = desc
     );
     assert_eq!(
         to_code_with_comments(Some(&*comments), &ast),
@@ -216,7 +233,7 @@ fn test_comment_dynamic_spliced_member() {
     let member: TsTypeElement = ts_quote!(
         comments,
         "/** #{desc} */ name: string" as TsTypeElement,
-        desc: LitStr = desc
+        desc: &str = desc
     );
     let ast = ts_quote!(
         "export interface Pet { #{m}; }" as ModuleItem,
@@ -342,16 +359,16 @@ fn test_comment_option_jsdoc_none() {
     );
 }
 
-// MARK: `Option<LitStr>` variable
+// MARK: `Option<&str>` variable
 
 #[test]
-fn test_comment_option_litstr_some() {
+fn test_comment_option_str_some() {
     let comments = Comments::new();
     let desc: Option<&str> = Some("The pet's name.");
     let elem: TsTypeElement = ts_quote!(
         comments,
         "/** #{desc} */ name: string" as TsTypeElement,
-        desc: Option<LitStr> = desc
+        desc: Option<&str> = desc
     );
     assert_eq!(
         to_code_with_comments(Some(&*comments), &elem),
@@ -360,13 +377,45 @@ fn test_comment_option_litstr_some() {
 }
 
 #[test]
-fn test_comment_option_litstr_none() {
+fn test_comment_option_str_none() {
     let comments = Comments::new();
     let desc: Option<&str> = None;
     let elem: TsTypeElement = ts_quote!(
         comments,
         "/** #{desc} */ name: string" as TsTypeElement,
-        desc: Option<LitStr> = desc
+        desc: Option<&str> = desc
+    );
+    assert_eq!(
+        to_code_with_comments(Some(&*comments), &elem),
+        "name: string;",
+    );
+}
+
+// MARK: `Option<String>` variable
+
+#[test]
+fn test_comment_option_string_some() {
+    let comments = Comments::new();
+    let desc: Option<String> = Some("The pet's name.".to_owned());
+    let elem: TsTypeElement = ts_quote!(
+        comments,
+        "/** #{desc} */ name: string" as TsTypeElement,
+        desc: Option<String> = desc
+    );
+    assert_eq!(
+        to_code_with_comments(Some(&*comments), &elem),
+        "/** The pet's name. */ name: string;",
+    );
+}
+
+#[test]
+fn test_comment_option_string_none() {
+    let comments = Comments::new();
+    let desc: Option<String> = None;
+    let elem: TsTypeElement = ts_quote!(
+        comments,
+        "/** #{desc} */ name: string" as TsTypeElement,
+        desc: Option<String> = desc
     );
     assert_eq!(
         to_code_with_comments(Some(&*comments), &elem),
@@ -487,7 +536,7 @@ fn test_no_comment_without_parameter() {
     let desc = "The pet's name.";
     let elem: TsTypeElement = ts_quote!(
         "/** #{desc} */ name: string" as TsTypeElement,
-        desc: LitStr = desc
+        desc: &str = desc
     );
     assert_eq!(to_code_with_comments(None, &elem), "name: string;");
 }

@@ -35,16 +35,30 @@ fn test_interface_with_extends() {
 // MARK: Literal property names
 
 #[test]
-fn test_interface_prop_litstr_valid_ident() {
+fn test_interface_prop_str_valid_ident() {
     let prop_name = "color";
-    let elem = ts_quote!("#{name}: string" as TsTypeElement, name: LitStr = prop_name);
+    let elem = ts_quote!("#{name}: string" as TsTypeElement, name: &str = prop_name);
     assert_eq!(to_code(&elem), "color: string;");
 }
 
 #[test]
-fn test_interface_prop_litstr_needs_quoting() {
+fn test_interface_prop_str_needs_quoting() {
     let prop_name = "background-color";
-    let elem = ts_quote!("#{name}: string" as TsTypeElement, name: LitStr = prop_name);
+    let elem = ts_quote!("#{name}: string" as TsTypeElement, name: &str = prop_name);
+    assert_eq!(to_code(&elem), r#""background-color": string;"#);
+}
+
+#[test]
+fn test_interface_prop_string_valid_ident() {
+    let prop_name = "color".to_owned();
+    let elem = ts_quote!("#{name}: string" as TsTypeElement, name: String = prop_name);
+    assert_eq!(to_code(&elem), "color: string;");
+}
+
+#[test]
+fn test_interface_prop_string_needs_quoting() {
+    let prop_name = "background-color".to_owned();
+    let elem = ts_quote!("#{name}: string" as TsTypeElement, name: String = prop_name);
     assert_eq!(to_code(&elem), r#""background-color": string;"#);
 }
 

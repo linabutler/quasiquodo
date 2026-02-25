@@ -41,7 +41,7 @@ fn test_expand_with_span_parameter() {
 #[test]
 fn test_expand_with_span_and_variables() {
     let actual = expand_expr(quote!(
-        span = my_span, "#{name}: #{ty}" as TsTypeElement, name: LitStr = "foo", ty: TsType = my_ty
+        span = my_span, "#{name}: #{ty}" as TsTypeElement, name: &str = "foo", ty: TsType = my_ty
     ));
     let expected: syn::Expr = parse_quote! {{
         let quote_var_name: &str = "foo";
@@ -51,7 +51,7 @@ fn test_expand_with_span_and_variables() {
             readonly: false,
             key: Box::new({
                 let name = quote_var_name.clone();
-                if ::quasiquodo::ts::swc::ecma_utils::is_valid_prop_ident(name) {
+                if ::quasiquodo::ts::swc::ecma_utils::is_valid_prop_ident(&name) {
                     ::quasiquodo::ts::swc::ecma_ast::Expr::Ident(::quasiquodo::ts::swc::ecma_ast::Ident::new_no_ctxt(
                         name.into(),
                         my_span,
@@ -145,7 +145,7 @@ fn test_expand_dynamic_doc_comment() {
     let actual = expand_expr(quote!(
         comments = my_comments,
         "/** #{desc} */ name: string" as TsTypeElement,
-        desc: LitStr = "hello"
+        desc: &str = "hello"
     ));
     let expected: syn::Expr = parse_quote! {{
         let quote_var_desc: &str = "hello";
@@ -374,14 +374,14 @@ fn test_expand_option_jsdoc_embedded_in_comment() {
     assert_eq!(actual, expected);
 }
 
-// MARK: `Option<LitStr>` sole placeholder
+// MARK: `Option<&str>` sole placeholder
 
 #[test]
-fn test_expand_option_litstr_sole_placeholder() {
+fn test_expand_option_str_sole_placeholder() {
     let actual = expand_expr(quote!(
         comments = my_comments,
         "/** #{desc} */ name: string" as TsTypeElement,
-        desc: Option<LitStr> = my_desc
+        desc: Option<&str> = my_desc
     ));
     let expected: syn::Expr = parse_quote! {{
         let quote_var_desc: Option<&str> = my_desc;

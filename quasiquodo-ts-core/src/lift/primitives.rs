@@ -58,8 +58,9 @@ impl Lift for swc_common::Span {
                             )
                         )
                     }
-                    // A single `Option<LitStr | JsDoc>` variable uses the text
-                    // if `Some`, or removes the entire comment if `None`.
+                    // A single `Option<&str | String | JsDoc>` variable uses
+                    // the text if `Some`, or removes the entire comment
+                    // if `None`.
                     [
                         VarData {
                             ident,
@@ -96,7 +97,7 @@ impl Lift for swc_common::Span {
                         let format_args = other.iter().map(|VarData { ident, ty }| -> syn::Expr {
                             match ty {
                                 VarType::JsDoc => parse_quote!(#ident.raw_text()),
-                                VarType::Option(inner) if matches!(**inner, VarType::LitStr) => {
+                                VarType::Option(inner) if matches!(**inner, VarType::Str(_)) => {
                                     parse_quote!(#ident.unwrap_or_default())
                                 }
                                 VarType::Option(inner) if matches!(**inner, VarType::JsDoc) => {
@@ -290,12 +291,12 @@ impl Lift for IdentName {
     }
 }
 
-/// Custom implementation to splice `LitStr` variables.
+/// Custom implementation to splice string variables.
 impl Lift for Str {
     fn lift(&self, context: &Context) -> syn::Result<CodeFragment> {
         let expr = if let Some(value) = self.value.as_str()
             && let Some(var) = context.stand_in(value)
-            && matches!(var.ty, VarType::LitStr)
+            && matches!(var.ty, VarType::Str(_))
         {
             let var_ident = var.to_tokens();
             let span = context.span();

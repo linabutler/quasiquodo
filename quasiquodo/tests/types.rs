@@ -109,34 +109,48 @@ fn test_ts_type_variable() {
 }
 
 #[test]
-fn test_lit_str_in_type_position() {
+fn test_str_in_type_position() {
     let v = "hello";
-    let ty: TsType = ts_quote!("#{v}" as TsType, v: LitStr = v);
+    let ty: TsType = ts_quote!("#{v}" as TsType, v: &str = v);
     assert_eq!(to_code(&ty), r#""hello""#);
 }
 
 #[test]
-fn test_lit_num_in_type_position() {
+fn test_string_in_type_position() {
+    let v = "hello".to_owned();
+    let ty: TsType = ts_quote!("#{v}" as TsType, v: String = v);
+    assert_eq!(to_code(&ty), r#""hello""#);
+}
+
+#[test]
+fn test_num_in_type_position() {
     let v = 42.0;
-    let ty: TsType = ts_quote!("#{v}" as TsType, v: LitNum = v);
+    let ty: TsType = ts_quote!("#{v}" as TsType, v: f64 = v);
     assert_eq!(to_code(&ty), "42");
 }
 
 #[test]
-fn test_lit_bool_in_type_position() {
+fn test_usize_in_type_position() {
+    let v: usize = 42;
+    let ty: TsType = ts_quote!("#{v}" as TsType, v: usize = v);
+    assert_eq!(to_code(&ty), "42");
+}
+
+#[test]
+fn test_bool_in_type_position() {
     let v = true;
-    let ty: TsType = ts_quote!("#{v}" as TsType, v: LitBool = v);
+    let ty: TsType = ts_quote!("#{v}" as TsType, v: bool = v);
     assert_eq!(to_code(&ty), "true");
 }
 
 #[test]
-fn test_lit_str_in_union() {
+fn test_str_in_union() {
     let active = "Active";
     let inactive = "Inactive";
     let ty: TsType = ts_quote!(
         "#{active} | #{inactive}" as TsType,
-        active: LitStr = active,
-        inactive: LitStr = inactive
+        active: &str = active,
+        inactive: &str = inactive
     );
     assert_eq!(to_code(&ty), r#""Active" | "Inactive""#);
 }
@@ -213,11 +227,11 @@ fn test_single_ts_type_element_substitution() {
 }
 
 #[test]
-fn test_union_vec_lit_str_splice() {
+fn test_union_vec_str_splice() {
     let variants: Vec<&str> = vec!["active", "inactive"];
     let ty: TsType = ts_quote!(
         "string | #{Variants}" as TsType,
-        Variants: Vec<LitStr> = variants
+        Variants: Vec<&str> = variants
     );
     assert_eq!(to_code(&ty), r#"string | "active" | "inactive""#);
 }

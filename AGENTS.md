@@ -42,9 +42,9 @@ ts_quote!("foo(#{arg})" as Expr, arg: Expr = my_expr)
 
 **`OutputKind`** (`input.rs`) — Determines how the TypeScript source is parsed and what AST type is extracted. Each variant wraps the source in valid syntax for SWC (e.g. `TsType` wraps as `type __T = <source>;`). See the enum for the full list of variants.
 
-**`VarType`** (`input.rs`) — The type of a substitution variable. Scalar types mirror `OutputKind` plus literal types (`LitStr`, `LitNum`, `LitBool`), with nestable containers (`Box<T>`, `Vec<T>`, `Option<T>`). `Vec<T>` and `Option<T>` variables splice into list positions.
+**`VarType`** (`input.rs`) — The type of a substitution variable. Scalar types mirror `OutputKind` plus literal types (`&str`, `String`, `f64`, `usize`, `bool`), with nestable containers (`Box<T>`, `Vec<T>`, `Option<T>`). `Vec<T>` and `Option<T>` variables splice into list positions. String types use `Str(StrVarType)` and numeric types use `Num(NumVarType)` inner enums.
 
-**Two-phase variable substitution** — Phase 1 (lexer/preprocessing): `#{var}` placeholders in the source string are replaced with type-appropriate stand-ins before SWC parses (`LitStr` → `"__tsq_N__"`, others → `__tsq_N__`). Phase 2 (codegen): the `Lift` trait detects stand-ins in the parsed AST and injects the variable's Rust expression.
+**Two-phase variable substitution** — Phase 1 (lexer/preprocessing): `#{var}` placeholders in the source string are replaced with type-appropriate stand-ins before SWC parses (`Str(_)` → `"__tsq_N__"`, others → `__tsq_N__`). Phase 2 (codegen): the `Lift` trait detects stand-ins in the parsed AST and injects the variable's Rust expression.
 
 **`Lift` trait** (`lift/mod.rs`) — Converts SWC AST nodes into `syn::Expr` that constructs them at runtime. ~100 implementations covering all SWC node types, split across submodules (`primitives`, `expressions`, `statements`, `declarations`, `types`, `modules`). Uses `impl_lift_for_struct!` and `impl_lift_for_enum!` macros for boilerplate.
 

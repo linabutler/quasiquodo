@@ -28,7 +28,7 @@ impl Lift for TsType {
                 VarType::TsType => {
                     return Ok(CodeFragment::Single(parse_quote!(#var_ident)));
                 }
-                VarType::LitStr => {
+                VarType::Str(_) => {
                     return Ok(CodeFragment::Single(
                         parse_quote!(::quasiquodo::ts::swc::ecma_ast::TsType::TsLitType(
                             ::quasiquodo::ts::swc::ecma_ast::TsLitType {
@@ -42,21 +42,23 @@ impl Lift for TsType {
                         )),
                     ));
                 }
-                VarType::LitNum => {
+                VarType::Num(_) => {
                     return Ok(CodeFragment::Single(
                         parse_quote!(::quasiquodo::ts::swc::ecma_ast::TsType::TsLitType(
                             ::quasiquodo::ts::swc::ecma_ast::TsLitType {
                                 span: #span_expr,
-                                lit: ::quasiquodo::ts::swc::ecma_ast::TsLit::Number(::quasiquodo::ts::swc::ecma_ast::Number {
-                                    span: #span_expr,
-                                    value: #var_ident,
-                                    raw: None,
+                                lit: ::quasiquodo::ts::swc::ecma_ast::TsLit::Number({
+                                    let n = (#var_ident).into();
+                                    ::quasiquodo::ts::swc::ecma_ast::Number {
+                                        span: #span_expr,
+                                        ..n
+                                    }
                                 }),
                             }
                         )),
                     ));
                 }
-                VarType::LitBool => {
+                VarType::Bool => {
                     return Ok(CodeFragment::Single(
                         parse_quote!(::quasiquodo::ts::swc::ecma_ast::TsType::TsLitType(
                             ::quasiquodo::ts::swc::ecma_ast::TsLitType {
@@ -76,14 +78,14 @@ impl Lift for TsType {
             }
         }
 
-        // Handle `LitStr` splices in iterable positions.
+        // Handle string splices in iterable positions.
         if let TsType::TsLitType(TsLitType {
             lit: TsLit::Str(s), ..
         }) = self
             && let Some(value) = s.value.as_str()
             && let Some(var) = context.stand_in(value)
             && let VarType::Vec(inner) | VarType::Option(inner) = &var.ty
-            && matches!(**inner, VarType::LitStr)
+            && matches!(**inner, VarType::Str(_))
         {
             let var_ident = var.to_tokens();
             let span_expr = context.span();
@@ -261,19 +263,19 @@ impl Lift for TsPropertySignature {
         let readonly = unsplice!(Lift::lift(readonly, context)?);
 
         // Simplify keys that are valid property identifiers:
-        // when a `LitStr` is spliced into the key position, emit
-        // conditional code that uses `Expr::Ident` for valid
+        // when a string variable is spliced into the key position,
+        // emit conditional code that uses `Expr::Ident` for valid
         // identifiers (e.g., `bare_name`), and `Expr::Lit` for
         // non-identifiers (e.g., `"kebab-name"`).
         let var = if let Expr::Lit(swc_ecma_ast::Lit::Str(s)) = key.as_ref()
             && let Some(value) = s.value.as_str()
             && let Some(var) = context.stand_in(value)
-            && matches!(var.ty, VarType::LitStr)
+            && matches!(var.ty, VarType::Str(_))
         {
             Some(var)
         } else if let Expr::Ident(ident) = key.as_ref()
             && let Some(var) = context.stand_in(&ident.sym)
-            && matches!(var.ty, VarType::LitStr)
+            && matches!(var.ty, VarType::Str(_))
         {
             Some(var)
         } else {
@@ -288,7 +290,7 @@ impl Lift for TsPropertySignature {
                 let span_expr = context.span();
                 parse_quote!(Box::new({
                     let name = #var_ident;
-                    if ::quasiquodo::ts::swc::ecma_utils::is_valid_prop_ident(name) {
+                    if ::quasiquodo::ts::swc::ecma_utils::is_valid_prop_ident(&name) {
                         ::quasiquodo::ts::swc::ecma_ast::Expr::Ident(
                             ::quasiquodo::ts::swc::ecma_ast::Ident::new_no_ctxt(
                                 name.into(),

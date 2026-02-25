@@ -12,7 +12,7 @@ use super::{
 /// Preprocesses a TypeScript source string, replacing `#{var}`
 /// placeholders with type-appropriate stand-ins prior to parsing:
 ///
-/// * For `LitStr` variables, `#{var}` becomes `"__tsq_N__"`,
+/// * For `&str` and `String` variables, `#{var}` becomes `"__tsq_N__"`,
 ///   because positions like `ImportSpecifier` require string literals.
 /// * For `Decl` variables, `#{var}` becomes `var __tsq_N__`,
 ///   because positions like `ExportDecl` require declarations.
@@ -60,7 +60,7 @@ pub(crate) fn preprocess(
             Some(&(index, ty)) => {
                 let stand_in = format!("__tsq_{index}__");
                 let replacement = match ty.inner() {
-                    VarType::LitStr => format!(r#""{stand_in}""#),
+                    VarType::Str(_) => format!(r#""{stand_in}""#),
                     VarType::JsDoc => format!("/** {stand_in} */"),
                     VarType::Decl => format!("var {stand_in}"),
                     // Identifiers are valid in all other positions.
@@ -90,11 +90,11 @@ pub(crate) fn preprocess(
             for token in CommentScanner::new(&comment.text) {
                 let replacement = match variables.get(&*token.name) {
                     Some(&(index, ty)) => {
-                        // Only string (`LitStr`) and `JsDoc` variables
-                        // can be spliced into JSDoc comments.
-                        if matches!(ty, VarType::LitStr | VarType::JsDoc)
+                        // Only string (`&str`, `String`) and `JsDoc`
+                        // variables can be spliced into JSDoc comments.
+                        if matches!(ty, VarType::Str(_) | VarType::JsDoc)
                             || matches!(ty, VarType::Option(inner)
-                                if matches!(**inner, VarType::LitStr | VarType::JsDoc))
+                                if matches!(**inner, VarType::Str(_) | VarType::JsDoc))
                         {
                             let stand_in = format!("__tsq_{index}__");
                             stand_ins.insert(
@@ -341,7 +341,7 @@ pub enum PreprocessError<'a> {
     UnboundVar(#[from] UnboundVar),
     #[error(
         "variable `#{{{0}}}` in JSDoc comment must have type \
-         `LitStr` or `JsDoc`, but has type `{1:?}`"
+         `&str`, `String`, or `JsDoc`, but has type `{1}`"
     )]
     JsDocVarType(String, &'a VarType),
     #[error("variable `#{{{0}}}` in JSDoc comment not bound to a value")]

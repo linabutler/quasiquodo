@@ -24,7 +24,7 @@ impl Lift for Expr {
                 VarType::Expr => {
                     return Ok(CodeFragment::Single(parse_quote!(#var_ident)));
                 }
-                VarType::LitStr => {
+                VarType::Str(_) => {
                     return Ok(CodeFragment::Single(
                         parse_quote!(::quasiquodo::ts::swc::ecma_ast::Expr::Lit(::quasiquodo::ts::swc::ecma_ast::Lit::Str(
                             ::quasiquodo::ts::swc::ecma_ast::Str {
@@ -35,18 +35,18 @@ impl Lift for Expr {
                         ))),
                     ));
                 }
-                VarType::LitNum => {
+                VarType::Num(_) => {
                     return Ok(CodeFragment::Single(
-                        parse_quote!(::quasiquodo::ts::swc::ecma_ast::Expr::Lit(::quasiquodo::ts::swc::ecma_ast::Lit::Num(
+                        parse_quote!(::quasiquodo::ts::swc::ecma_ast::Expr::Lit(::quasiquodo::ts::swc::ecma_ast::Lit::Num({
+                            let n = (#var_ident).into();
                             ::quasiquodo::ts::swc::ecma_ast::Number {
                                 span: #span_expr,
-                                value: #var_ident,
-                                raw: None,
+                                ..n
                             }
-                        ))),
+                        }))),
                     ));
                 }
-                VarType::LitBool => {
+                VarType::Bool => {
                     return Ok(CodeFragment::Single(
                         parse_quote!(::quasiquodo::ts::swc::ecma_ast::Expr::Lit(::quasiquodo::ts::swc::ecma_ast::Lit::Bool(
                             ::quasiquodo::ts::swc::ecma_ast::Bool {
@@ -183,24 +183,24 @@ impl_lift_for_struct!(TsInstantiation, [span, expr, type_args]);
 
 impl_lift_for_struct!(TsSatisfiesExpr, [span, expr, type_ann]);
 
-/// Custom implementation to rewrite computed properties with `LitStr` variables
+/// Custom implementation to rewrite computed properties with string variables
 /// as bare identifier properties where valid.
 impl Lift for MemberProp {
     fn lift(&self, context: &Context) -> syn::Result<CodeFragment> {
         let MemberProp::Computed(computed) = self else {
             return lift_variants!(self, context, MemberProp, [Ident, PrivateName, Computed]);
         };
-        // Check if this is a stand-in for a `LitStr` variable
+        // Check if this is a stand-in for a string variable
         // inserted during preprocessing.
         let var = if let Expr::Lit(Lit::Str(s)) = &*computed.expr
             && let Some(value) = s.value.as_str()
             && let Some(var) = context.stand_in(value)
-            && matches!(var.ty, VarType::LitStr)
+            && matches!(var.ty, VarType::Str(_))
         {
             Some(var)
         } else if let Expr::Ident(ident) = &*computed.expr
             && let Some(var) = context.stand_in(&ident.sym)
-            && matches!(var.ty, VarType::LitStr)
+            && matches!(var.ty, VarType::Str(_))
         {
             Some(var)
         } else {
@@ -215,7 +215,7 @@ impl Lift for MemberProp {
                 let span_expr = context.span();
                 Ok(CodeFragment::Single(parse_quote!({
                     let name = #var_ident;
-                    if ::quasiquodo::ts::swc::ecma_utils::is_valid_prop_ident(name) {
+                    if ::quasiquodo::ts::swc::ecma_utils::is_valid_prop_ident(&name) {
                         ::quasiquodo::ts::swc::ecma_ast::MemberProp::Ident(::quasiquodo::ts::swc::ecma_ast::IdentName {
                             span: #span_expr,
                             sym: name.into(),

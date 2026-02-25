@@ -33,53 +33,60 @@ fn test_expr_variable() {
 }
 
 #[test]
-fn test_lit_num_in_expr_position() {
+fn test_num_in_expr_position() {
     let v = 42.0;
-    let expr: Expr = ts_quote!("#{v}" as Expr, v: LitNum = v);
+    let expr: Expr = ts_quote!("#{v}" as Expr, v: f64 = v);
     assert_eq!(to_code(&expr), "42");
 }
 
 #[test]
-fn test_lit_bool_in_expr_position() {
+fn test_usize_in_expr_position() {
+    let v: usize = 42;
+    let expr: Expr = ts_quote!("#{v}" as Expr, v: usize = v);
+    assert_eq!(to_code(&expr), "42");
+}
+
+#[test]
+fn test_bool_in_expr_position() {
     let v = true;
-    let expr: Expr = ts_quote!("#{v}" as Expr, v: LitBool = v);
+    let expr: Expr = ts_quote!("#{v}" as Expr, v: bool = v);
     assert_eq!(to_code(&expr), "true");
 }
 
-// MARK: `LitStr` property name simplification
+// MARK: `&str` property name simplification
 
 #[test]
-fn test_member_prop_litstr_valid_ident() {
+fn test_member_prop_str_valid_ident() {
     let field_name = "name";
-    let expr: Expr = ts_quote!("foo[#{bar}]" as Expr, bar: LitStr = field_name);
+    let expr: Expr = ts_quote!("foo[#{bar}]" as Expr, bar: &str = field_name);
     assert_eq!(to_code(&expr), "foo.name");
 }
 
 #[test]
-fn test_member_prop_litstr_needs_computed() {
+fn test_member_prop_str_needs_computed() {
     let field_name = "some-field";
-    let expr: Expr = ts_quote!("foo[#{bar}]" as Expr, bar: LitStr = field_name);
+    let expr: Expr = ts_quote!("foo[#{bar}]" as Expr, bar: &str = field_name);
     assert_eq!(to_code(&expr), r#"foo["some-field"]"#);
 }
 
 #[test]
-fn test_member_prop_litstr_in_assignment() {
+fn test_member_prop_str_in_assignment() {
     let field_name = "name";
-    let expr: Expr = ts_quote!(r#"foo[#{bar}] = "baz""# as Expr, bar: LitStr = field_name);
+    let expr: Expr = ts_quote!(r#"foo[#{bar}] = "baz""# as Expr, bar: &str = field_name);
     assert_eq!(to_code(&expr), r#"foo.name = "baz""#);
 }
 
 #[test]
-fn test_member_prop_litstr_in_assignment_needs_computed() {
+fn test_member_prop_str_in_assignment_needs_computed() {
     let field_name = "some-field";
-    let expr: Expr = ts_quote!(r#"foo[#{bar}] = "baz""# as Expr, bar: LitStr = field_name);
+    let expr: Expr = ts_quote!(r#"foo[#{bar}] = "baz""# as Expr, bar: &str = field_name);
     assert_eq!(to_code(&expr), r#"foo["some-field"] = "baz""#);
 }
 
 #[test]
-fn test_object_prop_litstr_valid_ident() {
+fn test_object_prop_str_valid_ident() {
     let prop_name = "key";
-    let expr: Expr = ts_quote!("({ [#{key}]: 1 })" as Expr, key: LitStr = prop_name);
+    let expr: Expr = ts_quote!("({ [#{key}]: 1 })" as Expr, key: &str = prop_name);
     assert_eq!(
         to_code(&expr),
         indoc! {"({
@@ -89,9 +96,9 @@ fn test_object_prop_litstr_valid_ident() {
 }
 
 #[test]
-fn test_object_prop_litstr_needs_quoting() {
+fn test_object_prop_str_needs_quoting() {
     let prop_name = "some-key";
-    let expr: Expr = ts_quote!("({ [#{key}]: 1 })" as Expr, key: LitStr = prop_name);
+    let expr: Expr = ts_quote!("({ [#{key}]: 1 })" as Expr, key: &str = prop_name);
     assert_eq!(
         to_code(&expr),
         indoc! {r#"({

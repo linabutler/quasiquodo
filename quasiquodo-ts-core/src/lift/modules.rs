@@ -215,24 +215,24 @@ impl_lift_for_struct!(SetterProp, [span, key, this_param, param, body]);
 
 impl_lift_for_struct!(MethodProp, [key, function]);
 
-/// Custom implementation to rewrite computed properties with `LitStr` variables
+/// Custom implementation to rewrite computed properties with string variables
 /// as bare identifier properties where valid.
 impl Lift for PropName {
     fn lift(&self, context: &Context) -> syn::Result<CodeFragment> {
         let PropName::Computed(computed) = self else {
             return lift_variants!(self, context, PropName, [Ident, Str, Num, BigInt, Computed]);
         };
-        // Check if this is a stand-in for a `LitStr` variable
+        // Check if this is a stand-in for a string variable
         // inserted during preprocessing.
         let var = if let Expr::Lit(Lit::Str(s)) = &*computed.expr
             && let Some(value) = s.value.as_str()
             && let Some(var) = context.stand_in(value)
-            && matches!(var.ty, VarType::LitStr)
+            && matches!(var.ty, VarType::Str(_))
         {
             Some(var)
         } else if let Expr::Ident(ident) = &*computed.expr
             && let Some(var) = context.stand_in(&ident.sym)
-            && matches!(var.ty, VarType::LitStr)
+            && matches!(var.ty, VarType::Str(_))
         {
             Some(var)
         } else {
@@ -247,7 +247,7 @@ impl Lift for PropName {
                 let span_expr = context.span();
                 Ok(CodeFragment::Single(parse_quote!({
                     let name = #var_ident;
-                    if ::quasiquodo::ts::swc::ecma_utils::is_valid_prop_ident(name) {
+                    if ::quasiquodo::ts::swc::ecma_utils::is_valid_prop_ident(&name) {
                         ::quasiquodo::ts::swc::ecma_ast::PropName::Ident(::quasiquodo::ts::swc::ecma_ast::IdentName {
                             span: #span_expr,
                             sym: name.into(),

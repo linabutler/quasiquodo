@@ -94,28 +94,28 @@ let module = "./types";
 
 let ast = ts_quote!(
     "import type { Pet } from #{module};" as ModuleItem,
-    module: LitStr = module,
+    module: &str = module,
 );
 // => `import type { Pet } from "./types";`
 ```
 
-`LitStr`, `LitNum`, and `LitBool` variables replace their placeholders with literal values. `LitStr` variables in property name and member access positions simplify to plain identifiers when their values are valid identifiers:
+`&str`, `String`, `f64`, `usize`, and `bool` variables replace their placeholders with literal values. String variables in property name and member access positions simplify to plain identifiers when their values are valid identifiers:
 
 ```rust
 let name = "color";
-let ast = ts_quote!("#{name}: string" as TsTypeElement, name: LitStr = name);
+let ast = ts_quote!("#{name}: string" as TsTypeElement, name: &str = name);
 // => `color: string;`
 
 let name = "background-color";
-let ast = ts_quote!("#{name}: string" as TsTypeElement, name: LitStr = name);
+let ast = ts_quote!("#{name}: string" as TsTypeElement, name: &str = name);
 // => `"background-color": string;`
 
 let field = "name";
-let ast = ts_quote!("foo[#{f}]" as Expr, f: LitStr = field);
+let ast = ts_quote!("foo[#{f}]" as Expr, f: &str = field);
 // => `foo.name`
 
 let field = "some-field";
-let ast = ts_quote!("foo[#{f}]" as Expr, f: LitStr = field);
+let ast = ts_quote!("foo[#{f}]" as Expr, f: &str = field);
 // => `foo["some-field"]`
 ```
 
@@ -201,7 +201,7 @@ let ast = ts_quote!(
 
 ### JSDoc comments
 
-`ts_quote!` understands JSDoc-style `/** ... */` comments, and supports splicing `LitStr` variables into them:
+`ts_quote!` understands JSDoc-style `/** ... */` comments, and supports splicing string variables into them:
 
 ```rust
 use quasiquodo::ts::Comments;
@@ -212,7 +212,7 @@ let description = "The pet's name.";
 let ast = ts_quote!(
     comments,
     "/** #{desc} */ name: string" as TsTypeElement,
-    desc: LitStr = description,
+    desc: &str = description,
 );
 ```
 
@@ -228,8 +228,8 @@ let adjective = "required";
 let ast = ts_quote!(
     comments,
     "/** The #{noun} is #{adjective}. */ name: string" as TsTypeElement,
-    noun: LitStr = noun,
-    adjective: LitStr = adjective,
+    noun: &str = noun,
+    adjective: &str = adjective,
 );
 
 let code = to_code_with_comments(Some(&*comments), &ast);
@@ -274,7 +274,7 @@ let ast = ts_quote!(
 // => `/** This is a pet. */ name: string;`
 ```
 
-`Option<JsDoc>` and `Option<LitStr>` conditionally attach comments. When the value is `None`, no comment is emitted:
+`Option<JsDoc>`, `Option<&str>`, and `Option<String>` conditionally attach comments. When the value is `None`, no comment is emitted:
 
 ```rust
 let doc = if include_docs {
@@ -363,9 +363,11 @@ Variables can be scalar, boxed, or container types.
 | `ExportSpecifier` | `ExportSpecifier` | An export specifier |
 | `Decl` | `Decl` | A declaration |
 | `JsDoc` | `JsDoc` | A pre-built JSDoc comment |
-| `LitStr` | `&str` | A string literal value |
-| `LitNum` | `f64` | A numeric literal value |
-| `LitBool` | `bool` | A boolean literal value |
+| `&str` | `&str` | A string slice in literal position |
+| `String` | `String` | An owned string in literal position |
+| `f64` | `f64` | A floating-point number in literal position |
+| `usize` | `usize` | An integer in literal position |
+| `bool` | `bool` | A Boolean in literal position |
 
 **Container types** wrap any scalar type:
 
