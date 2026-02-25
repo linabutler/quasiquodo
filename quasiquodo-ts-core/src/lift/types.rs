@@ -28,7 +28,7 @@ impl Lift for TsType {
                 VarType::TsType => {
                     return Ok(CodeFragment::Single(parse_quote!(#var_ident)));
                 }
-                VarType::Str(_) => {
+                ty if ty.is_str() => {
                     return Ok(CodeFragment::Single(
                         parse_quote!(::quasiquodo::ts::swc::ecma_ast::TsType::TsLitType(
                             ::quasiquodo::ts::swc::ecma_ast::TsLitType {
@@ -85,7 +85,7 @@ impl Lift for TsType {
             && let Some(value) = s.value.as_str()
             && let Some(var) = context.stand_in(value)
             && let VarType::Vec(inner) | VarType::Option(inner) = &var.ty
-            && matches!(**inner, VarType::Str(_))
+            && inner.is_str()
         {
             let var_ident = var.to_tokens();
             let span_expr = context.span();
@@ -270,12 +270,12 @@ impl Lift for TsPropertySignature {
         let var = if let Expr::Lit(swc_ecma_ast::Lit::Str(s)) = key.as_ref()
             && let Some(value) = s.value.as_str()
             && let Some(var) = context.stand_in(value)
-            && matches!(var.ty, VarType::Str(_))
+            && var.ty.is_str()
         {
             Some(var)
         } else if let Expr::Ident(ident) = key.as_ref()
             && let Some(var) = context.stand_in(&ident.sym)
-            && matches!(var.ty, VarType::Str(_))
+            && var.ty.is_str()
         {
             Some(var)
         } else {

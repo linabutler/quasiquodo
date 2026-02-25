@@ -97,7 +97,7 @@ impl Lift for swc_common::Span {
                         let format_args = other.iter().map(|VarData { ident, ty }| -> syn::Expr {
                             match ty {
                                 VarType::JsDoc => parse_quote!(#ident.raw_text()),
-                                VarType::Option(inner) if matches!(**inner, VarType::Str(_)) => {
+                                VarType::Option(inner) if inner.is_str() => {
                                     parse_quote!(#ident.unwrap_or_default())
                                 }
                                 VarType::Option(inner) if matches!(**inner, VarType::JsDoc) => {
@@ -296,7 +296,7 @@ impl Lift for Str {
     fn lift(&self, context: &Context) -> syn::Result<CodeFragment> {
         let expr = if let Some(value) = self.value.as_str()
             && let Some(var) = context.stand_in(value)
-            && matches!(var.ty, VarType::Str(_))
+            && var.ty.is_str()
         {
             let var_ident = var.to_tokens();
             let span = context.span();

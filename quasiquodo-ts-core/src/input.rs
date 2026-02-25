@@ -223,6 +223,8 @@ pub enum VarType {
     /// Substitutes a `TsTypeElement` in an interface or type-literal body.
     TsTypeElement,
 
+    /// Wraps an inner type in a borrowed reference.
+    Ref(Box<VarType>),
     /// Wraps an inner type in `Box<Inner>`.
     Box(Box<VarType>),
     /// Wraps an inner type in `Option<Inner>`.
@@ -237,8 +239,18 @@ impl VarType {
     #[inline]
     pub fn inner(&self) -> &VarType {
         match self {
-            Self::Box(ty) | Self::Vec(ty) | Self::Option(ty) => ty.inner(),
+            Self::Ref(ty) | Self::Box(ty) | Self::Vec(ty) | Self::Option(ty) => ty,
             other => other,
+        }
+    }
+
+    #[inline]
+    pub fn is_str(&self) -> bool {
+        match self {
+            Self::Str(StrVarType::Str | StrVarType::String) => true,
+            Self::Box(inner) => matches!(**inner, Self::Str(StrVarType::Str)),
+            Self::Ref(inner) => matches!(**inner, Self::Str(StrVarType::Str)),
+            _ => false,
         }
     }
 
@@ -264,10 +276,11 @@ impl Display for VarType {
             Self::Param => f.write_str("Param"),
             Self::ParamOrTsParamProp => f.write_str("ParamOrTsParamProp"),
             Self::Stmt => f.write_str("Stmt"),
-            Self::Str(StrVarType::Str) => f.write_str("&str"),
+            Self::Str(StrVarType::Str) => f.write_str("str"),
             Self::Str(StrVarType::String) => f.write_str("String"),
             Self::TsType => f.write_str("TsType"),
             Self::TsTypeElement => f.write_str("TsTypeElement"),
+            Self::Ref(inner) => write!(f, "&{inner}"),
             Self::Box(inner) => write!(f, "Box<{inner}>"),
             Self::Option(inner) => write!(f, "Option<{inner}>"),
             Self::Vec(inner) => write!(f, "Vec<{inner}>"),
@@ -278,9 +291,8 @@ impl Display for VarType {
 impl Parse for VarType {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let (token, span) = if input.peek(Token![&]) {
-            input.parse::<Token![&]>()?;
-            let ident: Ident = input.parse()?;
-            (format!("&{ident}"), ident.span())
+            let and = input.parse::<Token![&]>()?;
+            ("&".into(), and.span)
         } else {
             let ident: Ident = input.parse()?;
             (ident.to_string(), ident.span())
@@ -298,11 +310,12 @@ impl Parse for VarType {
             "Param" => Ok(Self::Param),
             "ParamOrTsParamProp" => Ok(Self::ParamOrTsParamProp),
             "Stmt" => Ok(Self::Stmt),
-            "&str" => Ok(Self::Str(StrVarType::Str)),
+            "str" => Ok(Self::Str(StrVarType::Str)),
             "String" => Ok(Self::Str(StrVarType::String)),
             "TsType" => Ok(Self::TsType),
             "TsTypeElement" => Ok(Self::TsTypeElement),
             "usize" => Ok(Self::Num(NumVarType::Usize)),
+            "&" => Ok(Self::Ref(Box::new(input.parse()?))),
             "Box" => {
                 input.parse::<Token![<]>()?;
                 let inner: VarType = input.parse()?;
@@ -367,10 +380,15 @@ impl ToTokens for VarTypeToTokens<'_> {
                 quote!(::quasiquodo::ts::swc::ecma_ast::ParamOrTsParamProp)
             }
             VarType::Stmt => quote!(::quasiquodo::ts::swc::ecma_ast::Stmt),
-            VarType::Str(StrVarType::Str) => quote!(&str),
+            VarType::Str(StrVarType::Str) => quote!(str),
             VarType::Str(StrVarType::String) => quote!(String),
             VarType::TsType => quote!(::quasiquodo::ts::swc::ecma_ast::TsType),
             VarType::TsTypeElement => quote!(::quasiquodo::ts::swc::ecma_ast::TsTypeElement),
+            VarType::Ref(inner) => {
+                let quoted = Self(inner);
+                let tokens = quote!(#quoted);
+                quote!(&#tokens)
+            }
             VarType::Box(inner) => {
                 let quoted = Self(inner);
                 let tokens = quote!(#quoted);
@@ -396,8 +414,9 @@ enum MacroInputError<'a> {
         "unsupported variable type `{0}`; expected one of \
          `bool`, `ClassMember`, `Decl`, `Expr`, `ExportSpecifier`, \
          `f64`, `Ident`, `ImportSpecifier`, `JsDoc`, `Param`, \
-         `ParamOrTsParamProp`, `Stmt`, `&str`, `String`, `TsType`, \
-         `TsTypeElement`, `usize`, `Box<...>`, `Option<...>`, `Vec<...>`"
+         `ParamOrTsParamProp`, `Stmt`, `str`, `String`, `TsType`, \
+         `TsTypeElement`, `usize`, `&...`, `Box<...>`, `Option<...>`, \
+         `Vec<...>`"
     )]
     UnsupportedVar(&'a str),
 }
@@ -635,11 +654,21 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_var_type_str() {
+        let vt: VarType = parse_str("&str").unwrap();
+        assert!(matches!(
+            vt,
+            VarType::Ref(ref inner) if matches!(**inner, VarType::Str(StrVarType::Str))
+        ));
+    }
+
+    #[test]
     fn test_parse_var_type_option_str() {
         let vt: VarType = parse_str("Option<&str>").unwrap();
         assert!(matches!(
             vt,
-            VarType::Option(ref inner) if matches!(**inner, VarType::Str(StrVarType::Str))
+            VarType::Option(ref inner) if matches!(**inner, VarType::Ref(ref inner)
+                if matches!(**inner, VarType::Str(StrVarType::Str)))
         ));
     }
 

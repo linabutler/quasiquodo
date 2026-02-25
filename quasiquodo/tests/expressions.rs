@@ -53,6 +53,15 @@ fn test_bool_in_expr_position() {
     assert_eq!(to_code(&expr), "true");
 }
 
+// MARK: `Box<str>` in expression position
+
+#[test]
+fn test_lit_box_str_in_expr_position() {
+    let v: Box<str> = Box::from("hello");
+    let expr: Expr = ts_quote!("#{v}" as Expr, v: Box<str> = v);
+    assert_eq!(to_code(&expr), r#""hello""#);
+}
+
 // MARK: `&str` property name simplification
 
 #[test]

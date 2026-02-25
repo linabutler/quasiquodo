@@ -24,7 +24,7 @@ impl Lift for Expr {
                 VarType::Expr => {
                     return Ok(CodeFragment::Single(parse_quote!(#var_ident)));
                 }
-                VarType::Str(_) => {
+                ty if ty.is_str() => {
                     return Ok(CodeFragment::Single(
                         parse_quote!(::quasiquodo::ts::swc::ecma_ast::Expr::Lit(::quasiquodo::ts::swc::ecma_ast::Lit::Str(
                             ::quasiquodo::ts::swc::ecma_ast::Str {
@@ -195,12 +195,12 @@ impl Lift for MemberProp {
         let var = if let Expr::Lit(Lit::Str(s)) = &*computed.expr
             && let Some(value) = s.value.as_str()
             && let Some(var) = context.stand_in(value)
-            && matches!(var.ty, VarType::Str(_))
+            && var.ty.is_str()
         {
             Some(var)
         } else if let Expr::Ident(ident) = &*computed.expr
             && let Some(var) = context.stand_in(&ident.sym)
-            && matches!(var.ty, VarType::Str(_))
+            && var.ty.is_str()
         {
             Some(var)
         } else {
