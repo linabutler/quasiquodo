@@ -40,7 +40,7 @@ fn test_comment_dynamic_litstr() {
     let description = "The pet's name.";
     let elem: TsTypeElement = ts_quote!(
         comments,
-        "/** @{desc} */ name: string" as TsTypeElement,
+        "/** #{desc} */ name: string" as TsTypeElement,
         desc: LitStr = description
     );
     assert_eq!(
@@ -56,7 +56,7 @@ fn test_comment_dynamic_multiple_placeholders() {
     let adj = "required";
     let elem: TsTypeElement = ts_quote!(
         comments,
-        "/** The @{noun} is @{adj}. */ name: string" as TsTypeElement,
+        "/** The #{noun} is #{adj}. */ name: string" as TsTypeElement,
         noun: LitStr = noun,
         adj: LitStr = adj
     );
@@ -145,7 +145,7 @@ fn test_comment_dynamic_on_interface_member() {
     let desc = "The pet's name.";
     let ast = ts_quote!(
         comments,
-        "export interface Pet { /** @{desc} */ name: string; }" as ModuleItem,
+        "export interface Pet { /** #{desc} */ name: string; }" as ModuleItem,
         desc: LitStr = desc
     );
     assert_eq!(
@@ -168,7 +168,7 @@ fn test_comment_spliced_member() {
         "/** The pet's name. */ name: string" as TsTypeElement
     );
     let ast = ts_quote!(
-        "export interface Pet { @{m}; }" as ModuleItem,
+        "export interface Pet { #{m}; }" as ModuleItem,
         m: TsTypeElement = member
     );
     assert_eq!(
@@ -195,7 +195,7 @@ fn test_comment_spliced_vec_members() {
         ),
     ];
     let ast = ts_quote!(
-        "export interface Pet { @{M}; }" as ModuleItem,
+        "export interface Pet { #{M}; }" as ModuleItem,
         M: Vec<TsTypeElement> = members
     );
     assert_eq!(
@@ -215,11 +215,11 @@ fn test_comment_dynamic_spliced_member() {
     let desc = "The pet's name.";
     let member: TsTypeElement = ts_quote!(
         comments,
-        "/** @{desc} */ name: string" as TsTypeElement,
+        "/** #{desc} */ name: string" as TsTypeElement,
         desc: LitStr = desc
     );
     let ast = ts_quote!(
-        "export interface Pet { @{m}; }" as ModuleItem,
+        "export interface Pet { #{m}; }" as ModuleItem,
         m: TsTypeElement = member
     );
     assert_eq!(
@@ -240,7 +240,7 @@ fn test_comment_jsdoc_variable_on_type_element() {
     let doc = JsDoc::new("The pet's name.");
     let elem: TsTypeElement = ts_quote!(
         comments,
-        "@{doc} name: string" as TsTypeElement,
+        "#{doc} name: string" as TsTypeElement,
         doc: JsDoc = doc
     );
     assert_eq!(
@@ -255,7 +255,7 @@ fn test_comment_jsdoc_variable_on_interface_member() {
     let doc = JsDoc::new("The pet's name.");
     let ast = ts_quote!(
         comments,
-        "export interface Pet { @{doc} name: string; }" as ModuleItem,
+        "export interface Pet { #{doc} name: string; }" as ModuleItem,
         doc: JsDoc = doc
     );
     assert_eq!(
@@ -274,7 +274,7 @@ fn test_comment_jsdoc_variable_on_class_member() {
     let doc = JsDoc::new("The pet's name.");
     let stmt: Stmt = ts_quote!(
         comments,
-        "class Pet { @{doc} name: string; }" as Stmt,
+        "class Pet { #{doc} name: string; }" as Stmt,
         doc: JsDoc = doc
     );
     assert_eq!(
@@ -293,11 +293,11 @@ fn test_comment_jsdoc_variable_spliced_member() {
     let doc = JsDoc::new("The pet's name.");
     let member: TsTypeElement = ts_quote!(
         comments,
-        "@{doc} name: string" as TsTypeElement,
+        "#{doc} name: string" as TsTypeElement,
         doc: JsDoc = doc
     );
     let ast = ts_quote!(
-        "export interface Pet { @{m}; }" as ModuleItem,
+        "export interface Pet { #{m}; }" as ModuleItem,
         m: TsTypeElement = member
     );
     assert_eq!(
@@ -318,7 +318,7 @@ fn test_comment_option_jsdoc_some() {
     let doc = Some(JsDoc::new("The pet's name."));
     let elem: TsTypeElement = ts_quote!(
         comments,
-        "@{doc} name: string" as TsTypeElement,
+        "#{doc} name: string" as TsTypeElement,
         doc: Option<JsDoc> = doc
     );
     assert_eq!(
@@ -333,7 +333,7 @@ fn test_comment_option_jsdoc_none() {
     let doc: Option<JsDoc> = None;
     let elem: TsTypeElement = ts_quote!(
         comments,
-        "@{doc} name: string" as TsTypeElement,
+        "#{doc} name: string" as TsTypeElement,
         doc: Option<JsDoc> = doc
     );
     assert_eq!(
@@ -350,7 +350,7 @@ fn test_comment_option_litstr_some() {
     let desc: Option<&str> = Some("The pet's name.");
     let elem: TsTypeElement = ts_quote!(
         comments,
-        "/** @{desc} */ name: string" as TsTypeElement,
+        "/** #{desc} */ name: string" as TsTypeElement,
         desc: Option<LitStr> = desc
     );
     assert_eq!(
@@ -365,7 +365,7 @@ fn test_comment_option_litstr_none() {
     let desc: Option<&str> = None;
     let elem: TsTypeElement = ts_quote!(
         comments,
-        "/** @{desc} */ name: string" as TsTypeElement,
+        "/** #{desc} */ name: string" as TsTypeElement,
         desc: Option<LitStr> = desc
     );
     assert_eq!(
@@ -382,7 +382,7 @@ fn test_comment_jsdoc_embedded_with_text() {
     let doc = JsDoc::new("a pet");
     let elem: TsTypeElement = ts_quote!(
         comments,
-        "/** This is @{doc}. */ name: string" as TsTypeElement,
+        "/** This is #{doc}. */ name: string" as TsTypeElement,
         doc: JsDoc = doc
     );
     assert_eq!(
@@ -397,7 +397,7 @@ fn test_comment_option_jsdoc_embedded_some() {
     let doc: Option<JsDoc> = Some(JsDoc::new("a pet"));
     let elem: TsTypeElement = ts_quote!(
         comments,
-        "/** This is @{doc}. */ name: string" as TsTypeElement,
+        "/** This is #{doc}. */ name: string" as TsTypeElement,
         doc: Option<JsDoc> = doc
     );
     assert_eq!(
@@ -412,7 +412,7 @@ fn test_comment_option_jsdoc_embedded_none() {
     let doc: Option<JsDoc> = None;
     let elem: TsTypeElement = ts_quote!(
         comments,
-        "/** This is @{doc}. */ name: string" as TsTypeElement,
+        "/** This is #{doc}. */ name: string" as TsTypeElement,
         doc: Option<JsDoc> = doc
     );
     assert_eq!(
@@ -433,15 +433,15 @@ fn test_comment_jsdoc_survives_multi_level_splice() {
     let doc = JsDoc::new("The pet's name.");
     let member: ClassMember = ts_quote!(
         comments,
-        "@{doc} name: string" as ClassMember,
+        "#{doc} name: string" as ClassMember,
         doc: JsDoc = doc
     );
     let class: Stmt = ts_quote!(
-        "class Pet { @{m} }" as Stmt,
+        "class Pet { #{m} }" as Stmt,
         m: ClassMember = member
     );
     let block: Stmt = ts_quote!(
-        "{ @{s} }" as Stmt,
+        "{ #{s} }" as Stmt,
         s: Stmt = class
     );
     assert_eq!(
@@ -462,12 +462,12 @@ fn test_comment_jsdoc_coexists_with_outer_comment() {
     let doc = JsDoc::new("The name.");
     let member: TsTypeElement = ts_quote!(
         comments,
-        "@{doc} name: string" as TsTypeElement,
+        "#{doc} name: string" as TsTypeElement,
         doc: JsDoc = doc
     );
     let ast = ts_quote!(
         comments,
-        "/** A pet. */ export interface Pet { @{m}; }" as ModuleItem,
+        "/** A pet. */ export interface Pet { #{m}; }" as ModuleItem,
         m: TsTypeElement = member
     );
     assert_eq!(
@@ -486,7 +486,7 @@ fn test_comment_jsdoc_coexists_with_outer_comment() {
 fn test_no_comment_without_parameter() {
     let desc = "The pet's name.";
     let elem: TsTypeElement = ts_quote!(
-        "/** @{desc} */ name: string" as TsTypeElement,
+        "/** #{desc} */ name: string" as TsTypeElement,
         desc: LitStr = desc
     );
     assert_eq!(to_code_with_comments(None, &elem), "name: string;");

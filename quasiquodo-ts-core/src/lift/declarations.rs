@@ -9,12 +9,11 @@ use super::{
     impl_lift_for_unit_enum, lift_variants, splice_idents,
 };
 
-/// Custom implementation for `Decl` placeholders.
+/// Custom implementation to splice `Decl` variables.
 ///
-/// The preprocessor emits `var __tsq_N__` for `Decl` variables,
-/// because bare identifiers aren't valid in all `Decl` positions.
-/// This implementation detects and substitutes those placeholders
-/// with bound variables. Splices produce bare `Decl` items;
+/// The preprocessor emits `var __tsq_N__` stand-ins for `Decl` variables.
+/// This implementation detects and substitutes those stand-ins with
+/// the bound variables. Splices produce bare `Decl` items;
 /// [`Stmt::lift`] wraps them in `Stmt::Decl`.
 impl Lift for Decl {
     fn lift(&self, context: &Context) -> syn::Result<CodeFragment> {
@@ -26,7 +25,7 @@ impl Lift for Decl {
                     ..
                 },
             ] = &*decl.decls
-            && let Some(var) = context.placeholder(&bi.id.sym)
+            && let Some(var) = context.stand_in(&bi.id.sym)
             && matches!(var.ty.inner(), VarType::Decl)
         {
             let var_ident = var.to_tokens();
@@ -258,7 +257,7 @@ impl SpliceIdent for TsExprWithTypeArgs {
         if self.type_args.is_some() {
             return None;
         }
-        let var = context.placeholder(&ident.sym)?;
+        let var = context.stand_in(&ident.sym)?;
         if let VarType::Vec(v) | VarType::Option(v) = &var.ty
             && matches!(**v, VarType::Ident)
         {

@@ -28,21 +28,21 @@ fn test_expr_member() {
 #[test]
 fn test_expr_variable() {
     let some_expr: Expr = ts_quote!("foo()" as Expr);
-    let expr: Expr = ts_quote!("await @{val}" as Expr, val: Expr = some_expr);
+    let expr: Expr = ts_quote!("await #{val}" as Expr, val: Expr = some_expr);
     assert_eq!(to_code(&expr), "await foo()");
 }
 
 #[test]
 fn test_lit_num_in_expr_position() {
     let v = 42.0;
-    let expr: Expr = ts_quote!("@{v}" as Expr, v: LitNum = v);
+    let expr: Expr = ts_quote!("#{v}" as Expr, v: LitNum = v);
     assert_eq!(to_code(&expr), "42");
 }
 
 #[test]
 fn test_lit_bool_in_expr_position() {
     let v = true;
-    let expr: Expr = ts_quote!("@{v}" as Expr, v: LitBool = v);
+    let expr: Expr = ts_quote!("#{v}" as Expr, v: LitBool = v);
     assert_eq!(to_code(&expr), "true");
 }
 
@@ -51,35 +51,35 @@ fn test_lit_bool_in_expr_position() {
 #[test]
 fn test_member_prop_litstr_valid_ident() {
     let field_name = "name";
-    let expr: Expr = ts_quote!("foo[@{bar}]" as Expr, bar: LitStr = field_name);
+    let expr: Expr = ts_quote!("foo[#{bar}]" as Expr, bar: LitStr = field_name);
     assert_eq!(to_code(&expr), "foo.name");
 }
 
 #[test]
 fn test_member_prop_litstr_needs_computed() {
     let field_name = "some-field";
-    let expr: Expr = ts_quote!("foo[@{bar}]" as Expr, bar: LitStr = field_name);
+    let expr: Expr = ts_quote!("foo[#{bar}]" as Expr, bar: LitStr = field_name);
     assert_eq!(to_code(&expr), r#"foo["some-field"]"#);
 }
 
 #[test]
 fn test_member_prop_litstr_in_assignment() {
     let field_name = "name";
-    let expr: Expr = ts_quote!(r#"foo[@{bar}] = "baz""# as Expr, bar: LitStr = field_name);
+    let expr: Expr = ts_quote!(r#"foo[#{bar}] = "baz""# as Expr, bar: LitStr = field_name);
     assert_eq!(to_code(&expr), r#"foo.name = "baz""#);
 }
 
 #[test]
 fn test_member_prop_litstr_in_assignment_needs_computed() {
     let field_name = "some-field";
-    let expr: Expr = ts_quote!(r#"foo[@{bar}] = "baz""# as Expr, bar: LitStr = field_name);
+    let expr: Expr = ts_quote!(r#"foo[#{bar}] = "baz""# as Expr, bar: LitStr = field_name);
     assert_eq!(to_code(&expr), r#"foo["some-field"] = "baz""#);
 }
 
 #[test]
 fn test_object_prop_litstr_valid_ident() {
     let prop_name = "key";
-    let expr: Expr = ts_quote!("({ [@{key}]: 1 })" as Expr, key: LitStr = prop_name);
+    let expr: Expr = ts_quote!("({ [#{key}]: 1 })" as Expr, key: LitStr = prop_name);
     assert_eq!(
         to_code(&expr),
         indoc! {"({
@@ -91,7 +91,7 @@ fn test_object_prop_litstr_valid_ident() {
 #[test]
 fn test_object_prop_litstr_needs_quoting() {
     let prop_name = "some-key";
-    let expr: Expr = ts_quote!("({ [@{key}]: 1 })" as Expr, key: LitStr = prop_name);
+    let expr: Expr = ts_quote!("({ [#{key}]: 1 })" as Expr, key: LitStr = prop_name);
     assert_eq!(
         to_code(&expr),
         indoc! {r#"({
@@ -125,14 +125,14 @@ fn test_bigint_large() {
 #[test]
 fn test_call_args_vec_expr_splice() {
     let args: Vec<Expr> = vec![ts_quote!("1" as Expr), ts_quote!("2" as Expr)];
-    let expr: Expr = ts_quote!("foo(@{Args})" as Expr, Args: Vec<Expr> = args);
+    let expr: Expr = ts_quote!("foo(#{Args})" as Expr, Args: Vec<Expr> = args);
     assert_eq!(to_code(&expr), "foo(1, 2)");
 }
 
 #[test]
 fn test_array_lit_vec_expr_splice() {
     let items: Vec<Expr> = vec![ts_quote!("1" as Expr), ts_quote!("2" as Expr)];
-    let expr: Expr = ts_quote!("[@{Items}]" as Expr, Items: Vec<Expr> = items);
+    let expr: Expr = ts_quote!("[#{Items}]" as Expr, Items: Vec<Expr> = items);
     assert_eq!(
         to_code(&expr),
         indoc! {"[

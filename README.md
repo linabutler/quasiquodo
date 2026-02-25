@@ -74,14 +74,14 @@ let iface = ts_quote!("interface Pet { name: string; age?: number; }" as Decl);
 
 ### Variable substitution
 
-You can use `@{binding}` placeholders to splice variables into the TypeScript syntax tree that `ts_quote!` builds. Each variable is declared with a name, type, and value:
+You can use `#{var}` placeholders to splice variables into the TypeScript syntax tree that `ts_quote!` builds. Each variable is declared with a name, type, and value:
 
 ```rust
 let name = ts_quote!("Pet" as Ident);
 let field_type = ts_quote!("string[]" as TsType);
 
 let ast = ts_quote!(
-    "@{name}: @{field_type}" as TsTypeElement,
+    "#{name}: #{field_type}" as TsTypeElement,
     name: Ident = name,
     field_type: TsType = field_type,
 );
@@ -93,7 +93,7 @@ Placeholders can be used in any position:
 let module = "./types";
 
 let ast = ts_quote!(
-    "import type { Pet } from @{module};" as ModuleItem,
+    "import type { Pet } from #{module};" as ModuleItem,
     module: LitStr = module,
 );
 // => `import type { Pet } from "./types";`
@@ -103,19 +103,19 @@ let ast = ts_quote!(
 
 ```rust
 let name = "color";
-let ast = ts_quote!("@{name}: string" as TsTypeElement, name: LitStr = name);
+let ast = ts_quote!("#{name}: string" as TsTypeElement, name: LitStr = name);
 // => `color: string;`
 
 let name = "background-color";
-let ast = ts_quote!("@{name}: string" as TsTypeElement, name: LitStr = name);
+let ast = ts_quote!("#{name}: string" as TsTypeElement, name: LitStr = name);
 // => `"background-color": string;`
 
 let field = "name";
-let ast = ts_quote!("foo[@{f}]" as Expr, f: LitStr = field);
+let ast = ts_quote!("foo[#{f}]" as Expr, f: LitStr = field);
 // => `foo.name`
 
 let field = "some-field";
-let ast = ts_quote!("foo[@{f}]" as Expr, f: LitStr = field);
+let ast = ts_quote!("foo[#{f}]" as Expr, f: LitStr = field);
 // => `foo["some-field"]`
 ```
 
@@ -141,7 +141,7 @@ let members = vec![
 ];
 
 let ast = ts_quote!(
-    "export interface @{name} { @{members}; }" as ModuleItem,
+    "export interface #{name} { #{members}; }" as ModuleItem,
     name: Ident = name,
     members: Vec<TsTypeElement> = members,
 );
@@ -165,7 +165,7 @@ let extra = vec![
 ];
 
 let ast = ts_quote!(
-    "string | @{extra}" as TsType,
+    "string | #{extra}" as TsType,
     extra: Vec<Box<TsType>> = extra,
 );
 // => `string | number | boolean`
@@ -181,7 +181,7 @@ let extra = if include_age {
 };
 
 let ast = ts_quote!(
-    "export interface Pet { name: string; @{extra}; }" as ModuleItem,
+    "export interface Pet { name: string; #{extra}; }" as ModuleItem,
     extra: Option<TsTypeElement> = extra,
 );
 ```
@@ -211,7 +211,7 @@ let description = "The pet's name.";
 
 let ast = ts_quote!(
     comments,
-    "/** @{desc} */ name: string" as TsTypeElement,
+    "/** #{desc} */ name: string" as TsTypeElement,
     desc: LitStr = description,
 );
 ```
@@ -227,7 +227,7 @@ let adjective = "required";
 
 let ast = ts_quote!(
     comments,
-    "/** The @{noun} is @{adjective}. */ name: string" as TsTypeElement,
+    "/** The #{noun} is #{adjective}. */ name: string" as TsTypeElement,
     noun: LitStr = noun,
     adjective: LitStr = adjective,
 );
@@ -247,7 +247,7 @@ let doc = JsDoc::new("The pet's name.");
 
 let ast = ts_quote!(
     comments,
-    "export interface Pet { @{doc} name: string; }" as ModuleItem,
+    "export interface Pet { #{doc} name: string; }" as ModuleItem,
     doc: JsDoc = doc,
 );
 
@@ -268,7 +268,7 @@ export interface Pet {
 let doc = JsDoc::new("a pet");
 let ast = ts_quote!(
     comments,
-    "/** This is @{doc}. */ name: string" as TsTypeElement,
+    "/** This is #{doc}. */ name: string" as TsTypeElement,
     doc: JsDoc = doc,
 );
 // => `/** This is a pet. */ name: string;`
@@ -285,7 +285,7 @@ let doc = if include_docs {
 
 let ast = ts_quote!(
     comments,
-    "@{doc} name: string" as TsTypeElement,
+    "#{doc} name: string" as TsTypeElement,
     doc: Option<JsDoc> = doc,
 );
 // Either `/** The pet's name. */ name: string;` or
@@ -301,13 +301,13 @@ let doc = JsDoc::new("The pet's name.");
 // Attach the comment to a member...
 let member = ts_quote!(
     comments,
-    "@{doc} name: string" as ClassMember,
+    "#{doc} name: string" as ClassMember,
     doc: JsDoc = doc,
 );
 
 // ...then splice the member into a class.
 let class = ts_quote!(
-    "class Pet { @{member} }" as Stmt,
+    "class Pet { #{member} }" as Stmt,
     member: ClassMember = member,
 );
 
@@ -345,7 +345,7 @@ The output kind tells `ts_quote!` which [`swc_ecma_ast`](https://rustdoc.swc.rs/
 
 ### Variable types
 
-Variables declared with `@{binding}` can be scalar, boxed, or container types.
+Variables can be scalar, boxed, or container types.
 
 **Scalar types** substitute a single node or literal value:
 
@@ -379,9 +379,9 @@ Variables declared with `@{binding}` can be scalar, boxed, or container types.
 
 `ts_quote!` is a procedural macro that expands to a pure Rust block expression—no parsing, just construction code. All TypeScript parsing happens at compile time.
 
-When the macro runs, it first replaces `@{binding}` placeholders with syntactically appropriate stand-ins, ensuring that the preprocessed source is valid TypeScript. It then parses that source with `swc_ecma_parser`, and extracts the requested output type.
+When the macro runs, it first replaces `#{var}` placeholders with syntactically appropriate stand-ins, ensuring that the preprocessed source is valid TypeScript. It then parses that source with `swc_ecma_parser`, and extracts the requested output type from the AST.
 
-The interesting part comes next: Quasiquodo _unparses_ the parsed AST, turning each syntax tree node into a Rust expression that constructs the equivalent node in your program. As the macro does this, it replaces the `@{binding}` stand-ins with the bound variables. The result is Rust code that builds the AST directly.
+The interesting part comes next: Quasiquodo _unparses_ the AST, turning each syntax node into a Rust expression that constructs the equivalent node in your program. As the macro does this, it replaces the `#{var}` stand-ins with the bound variables. The result is Rust code that builds the AST directly.
 
 ## Contributing
 

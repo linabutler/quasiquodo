@@ -32,14 +32,15 @@ pub fn expand(input: proc_macro2::TokenStream) -> proc_macro2::TokenStream {
 fn expand_inner(input: proc_macro2::TokenStream) -> syn::Result<proc_macro2::TokenStream> {
     let input: MacroInput = syn::parse2(input)?;
 
-    // Preprocess: replace `@{binding}` with type-appropriate placeholders.
-    let (preprocessed, placeholders) = lexer::preprocess(input.source.value(), &input.variables)
+    // Preprocess: replace `#{var}` placeholders with
+    // type-appropriate stand-ins.
+    let (preprocessed, stand_ins) = lexer::preprocess(input.source.value(), &input.variables)
         .map_err(|err| syn::Error::new(input.source.span(), err))?;
 
     let (parsed, comments) = parse_source(preprocessed, &input.output_kind)
         .map_err(|err| syn::Error::new(input.source.span(), err))?;
 
-    let (stmts, context) = context(&input, placeholders, comments)?;
+    let (stmts, context) = context(&input, stand_ins, comments)?;
     let expr = match parsed.lift(&context)? {
         CodeFragment::Single(expr) => expr,
         CodeFragment::Splice(_) => {

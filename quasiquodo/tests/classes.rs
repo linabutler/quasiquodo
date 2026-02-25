@@ -22,7 +22,7 @@ fn test_class_member_method() {
 fn test_method_params_vec_splice() {
     let params: Vec<Param> = vec![ts_quote!("id: string" as Param)];
     let member: ClassMember = ts_quote!(
-        "async get(@{Params}): Promise<void> {}" as ClassMember,
+        "async get(#{Params}): Promise<void> {}" as ClassMember,
         Params: Vec<Param> = params,
     );
     assert_eq!(to_code(&member), "async get(id: string): Promise<void> {}");
@@ -34,7 +34,7 @@ fn test_method_params_vec_splice() {
 fn test_constructor_params_vec_splice() {
     let params: Vec<ParamOrTsParamProp> = vec![ts_quote!("x: string" as ParamOrTsParamProp)];
     let member: ClassMember = ts_quote!(
-        "constructor(@{Params}) {}" as ClassMember,
+        "constructor(#{Params}) {}" as ClassMember,
         Params: Vec<ParamOrTsParamProp> = params,
     );
     assert_eq!(to_code(&member), "constructor(x: string){}");
@@ -44,7 +44,7 @@ fn test_constructor_params_vec_splice() {
 fn test_constructor_fixed_plus_vec_splice() {
     let rest: Vec<ParamOrTsParamProp> = vec![ts_quote!("y: number" as ParamOrTsParamProp)];
     let member: ClassMember = ts_quote!(
-        "constructor(x: string, @{Rest}) {}" as ClassMember,
+        "constructor(x: string, #{Rest}) {}" as ClassMember,
         Rest: Vec<ParamOrTsParamProp> = rest,
     );
     assert_eq!(to_code(&member), "constructor(x: string, y: number){}");
@@ -54,7 +54,7 @@ fn test_constructor_fixed_plus_vec_splice() {
 fn test_single_param_or_ts_param_prop_substitution() {
     let my_param: ParamOrTsParamProp = ts_quote!("x: string" as ParamOrTsParamProp);
     let member: ClassMember = ts_quote!(
-        "constructor(@{p}) {}" as ClassMember,
+        "constructor(#{p}) {}" as ClassMember,
         p: ParamOrTsParamProp = my_param,
     );
     assert_eq!(to_code(&member), "constructor(x: string){}");
@@ -73,7 +73,7 @@ fn test_param_or_ts_param_prop_with_variable() {
     let my_name: Ident = ts_quote!("x" as Ident);
     let my_ty: TsType = ts_quote!("number" as TsType);
     let p: ParamOrTsParamProp = ts_quote!(
-        "@{name}: @{ty}" as ParamOrTsParamProp,
+        "#{name}: #{ty}" as ParamOrTsParamProp,
         name: Ident = my_name,
         ty: TsType = my_ty,
     );

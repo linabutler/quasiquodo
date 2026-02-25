@@ -4,20 +4,19 @@ use std::fmt::Display;
 
 use proc_macro2::{Span, TokenStream};
 use quote::{ToTokens, TokenStreamExt, quote};
-use swc_common::BytePos;
-use swc_common::comments::{Comment, SingleThreadedComments};
+use swc_common::{
+    BytePos,
+    comments::{Comment, SingleThreadedComments, SingleThreadedCommentsMapInner},
+};
 use syn::parse_quote;
 
-use super::{
-    input::{MacroInput, VarType, Variable},
-    lexer,
-};
+use super::input::{MacroInput, VarType, Variable};
 
-/// Prepares variable bindings: emits `let` bindings
+/// Prepares bound variables: emits Rust `let` bindings
 /// and builds the substitution [`Context`].
 pub(crate) fn context(
     input: &MacroInput,
-    placeholders: HashMap<String, PlaceholderData>,
+    stand_ins: HashMap<String, StandInData>,
     comments: SingleThreadedComments,
 ) -> syn::Result<(Vec<syn::Stmt>, Context)> {
     use std::collections::hash_map::Entry;
@@ -50,7 +49,7 @@ pub(crate) fn context(
 
     let docs = {
         let (leading, trailing) = comments.borrow_all();
-        lexer::docs::comments(&leading, &trailing)
+        jsdoc_comments(&leading, &trailing)
             .map(|comment| (comment.span.lo, comment.clone()))
             .collect()
     };
@@ -59,11 +58,37 @@ pub(crate) fn context(
         span_expr: input.span.clone(),
         comments_expr: input.comments.clone(),
         vars,
-        placeholders,
+        stand_ins,
         docs: RefCell::new(docs),
     };
 
     Ok((bindings, context))
+}
+
+/// Returns an iterator over all JSDoc comments in
+/// a [`SingleThreadedComments`].
+///
+/// [`swc_ecma_parser`] treats a same-line block comment as
+/// a trailing comment on the previous line, rather than
+/// a leading comment on the current line, so we need to
+/// look at all comments.
+#[inline]
+pub(crate) fn jsdoc_comments<'a>(
+    leading: &'a SingleThreadedCommentsMapInner,
+    trailing: &'a SingleThreadedCommentsMapInner,
+) -> impl Iterator<Item = &'a Comment> {
+    leading
+        .values()
+        .chain(trailing.values())
+        .flatten()
+        .filter(|comment| {
+            // JSDoc comments start with `/**`, so the comment text
+            // (everything after `/*`) should start with exactly one `*`.
+            comment
+                .text
+                .strip_prefix('*')
+                .is_some_and(|s| !s.starts_with('*'))
+        })
 }
 
 /// Context for variable substitution during code generation.
@@ -74,19 +99,18 @@ pub(crate) struct Context {
     comments_expr: Option<syn::Expr>,
     /// The variables passed to the macro.
     vars: HashMap<VarName, VarData>,
-    /// Maps placeholder values (e.g., `__tsq_0__`) to variable names.
-    placeholders: HashMap<String, PlaceholderData>,
+    /// Maps stand-ins to variable names.
+    stand_ins: HashMap<String, StandInData>,
     /// JSDoc comments collected from the parse phase, keyed by
     /// the comment's start position.
     docs: RefCell<BTreeMap<BytePos, Comment>>,
 }
 
 impl Context {
-    /// Looks up a variable by its placeholder value
-    /// (e.g., `__tsq_0__`).
+    /// Looks up a variable by its stand-in (e.g., `__tsq_0__`).
     #[inline]
-    pub fn placeholder(&self, value: &str) -> Option<&VarData> {
-        let data = self.placeholders.get(value)?;
+    pub fn stand_in(&self, value: &str) -> Option<&VarData> {
+        let data = self.stand_ins.get(value)?;
         self.vars.get(&data.var)
     }
 
@@ -169,12 +193,12 @@ impl ToTokens for VarDataToTokens<'_> {
     }
 }
 
-/// Data for a single placeholder in the preprocessed source.
-pub(crate) struct PlaceholderData {
+/// Data for a single stand-in in the preprocessed source.
+pub(crate) struct StandInData {
     /// The variable name, corresponding to [`Context::vars`].
     pub var: VarName,
 }
 
 #[derive(Debug, thiserror::Error)]
-#[error("variable `@{{{0}}}` not bound to a value")]
+#[error("variable `#{{{0}}}` not bound to a value")]
 pub struct UnboundVar(pub String);

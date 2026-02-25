@@ -11,14 +11,13 @@ use super::{
 
 impl Lift for TsType {
     fn lift(&self, context: &Context) -> syn::Result<CodeFragment> {
-        // Check for placeholder type references that stand in
-        // for `TsType` variables.
+        // Handle `TsType` splices.
         if let TsType::TsTypeRef(TsTypeRef {
             type_name: TsEntityName::Ident(ident),
             type_params: None,
             ..
         }) = self
-            && let Some(var) = context.placeholder(&ident.sym)
+            && let Some(var) = context.stand_in(&ident.sym)
         {
             let var_ident = var.to_tokens();
             let span_expr = context.span();
@@ -77,15 +76,12 @@ impl Lift for TsType {
             }
         }
 
-        // Check for placeholder string literals that stand in for
-        // `Vec<LitStr>` variables. Preprocessing wraps `LitStr`
-        // placeholders in quotes, so SWC parses them as
-        // `TsLitType { lit: Str(s) }`.
+        // Handle `LitStr` splices in iterable positions.
         if let TsType::TsLitType(TsLitType {
             lit: TsLit::Str(s), ..
         }) = self
             && let Some(value) = s.value.as_str()
-            && let Some(var) = context.placeholder(value)
+            && let Some(var) = context.stand_in(value)
             && let VarType::Vec(inner) | VarType::Option(inner) = &var.ty
             && matches!(**inner, VarType::LitStr)
         {
@@ -265,18 +261,18 @@ impl Lift for TsPropertySignature {
         let readonly = unsplice!(Lift::lift(readonly, context)?);
 
         // Simplify keys that are valid property identifiers:
-        // when a `LitStr` placeholder is in the key position, emit
+        // when a `LitStr` is spliced into the key position, emit
         // conditional code that uses `Expr::Ident` for valid
         // identifiers (e.g., `bare_name`), and `Expr::Lit` for
         // non-identifiers (e.g., `"kebab-name"`).
         let var = if let Expr::Lit(swc_ecma_ast::Lit::Str(s)) = key.as_ref()
             && let Some(value) = s.value.as_str()
-            && let Some(var) = context.placeholder(value)
+            && let Some(var) = context.stand_in(value)
             && matches!(var.ty, VarType::LitStr)
         {
             Some(var)
         } else if let Expr::Ident(ident) = key.as_ref()
-            && let Some(var) = context.placeholder(&ident.sym)
+            && let Some(var) = context.stand_in(&ident.sym)
             && matches!(var.ty, VarType::LitStr)
         {
             Some(var)

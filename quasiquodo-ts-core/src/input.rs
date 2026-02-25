@@ -14,14 +14,15 @@ mod kw {
 /// The macro understands these forms:
 ///
 /// ```text
-/// "source" as OutputKind, var: Type = expr, ...
-/// span = expr, "source" as OutputKind, ...
-/// span, "source" as OutputKind, ...
-/// comments = expr, "source" as OutputKind, ...
-/// comments, "source" as OutputKind, ...
+/// "source" as OutputKind, var: Type = expr, vars...
+/// span = expr, "source" as OutputKind, vars...
+/// span, "source" as OutputKind, vars...
+/// comments = expr, "source" as OutputKind, vars...
+/// comments, "source" as OutputKind, vars...
 /// ```
 ///
-/// `...` parses zero or more [`Variable`]s.
+/// `...vars` parses zero or more [`Variable`]s, declared as
+/// `name: type = value`.
 pub struct MacroInput {
     pub span: Option<syn::Expr>,
     pub comments: Option<syn::Expr>,
@@ -393,7 +394,7 @@ mod tests {
     #[test]
     fn test_parse_with_span_and_variables() {
         let input: MacroInput = parse_str(
-            r#"span = my_span, "$name: $ty" as TsTypeElement, name: LitStr = "foo", ty: TsType = my_ty"#,
+            r##"span = my_span, "#{name}: #{ty}" as TsTypeElement, name: LitStr = "foo", ty: TsType = my_ty"##,
         )
         .unwrap();
         assert!(matches!(input.output_kind, OutputKind::TsTypeElement));
@@ -404,7 +405,7 @@ mod tests {
     #[test]
     fn test_parse_with_variables() {
         let input: MacroInput = parse_str(
-            r#""export type $Name = $T;" as ModuleItem, Name: Ident = name, T: TsType = ty"#,
+            r##""export type #{Name} = #{T};" as ModuleItem, Name: Ident = name, T: TsType = ty"##,
         )
         .unwrap();
         assert!(input.span.is_none());

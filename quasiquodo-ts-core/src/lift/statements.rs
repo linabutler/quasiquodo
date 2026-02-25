@@ -5,21 +5,21 @@ use crate::{context::Context, input::VarType};
 
 use super::{CodeFragment, Lift, impl_lift_for_newtype_enum, impl_lift_for_struct, lift_variants};
 
-/// Custom implementation for `Stmt` and `Decl` placeholders.
+/// Custom implementation to splice `Stmt` and `Decl` variables.
 ///
-/// For `Stmt` placeholders, the preprocessor emits identifiers that parse as
-/// `ExprStmt(Ident)`. This implementation detects and substitutes those
-/// placeholders with bound variables.
+/// For `Stmt` variables, the preprocessor inserts stand-ins that parse as
+/// `ExprStmt(Ident)`. This custom implementation detects and replaces
+/// those stand-ins with the bound variables.
 ///
-/// For `Decl` placeholders, the preprocessor emits `var __tsq_N__`, which
-/// parses as `Stmt::Decl(VarDecl(...))`. `Decl::lift()` returns bare
+/// For `Decl` stand-ins, the preprocessor inserts `var __tsq_N__` stand-ins
+/// that parse as `Stmt::Decl(VarDecl(...))`. [`Decl::lift`] returns bare
 /// `Decl` splices, so this implementation wraps those splices in `Stmt::Decl`.
 impl Lift for Stmt {
     fn lift(&self, context: &Context) -> syn::Result<CodeFragment> {
-        // Handle `Stmt` placeholders.
+        // Handle `Stmt` splices.
         if let Stmt::Expr(ExprStmt { expr, .. }) = self
             && let Expr::Ident(ident) = &**expr
-            && let Some(var) = context.placeholder(&ident.sym)
+            && let Some(var) = context.stand_in(&ident.sym)
             && matches!(var.ty.inner(), VarType::Stmt)
         {
             let var_ident = var.to_tokens();
@@ -31,7 +31,7 @@ impl Lift for Stmt {
             });
         }
 
-        // Handle `Decl` placeholders.
+        // Handle `Decl` splices.
         if let Stmt::Decl(inner) = self {
             return Ok(match inner.lift(context)? {
                 CodeFragment::Single(expr) => CodeFragment::Single(parse_quote!(

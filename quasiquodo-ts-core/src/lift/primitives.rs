@@ -8,7 +8,7 @@ use syn::parse_quote;
 use crate::{
     context::{Context, UnboundVar, VarData},
     input::VarType,
-    lexer::docs::{self, CommentSegment},
+    lexer::stand_ins::{StandInScanner, StandInToken},
     lift::unsplice,
 };
 
@@ -23,17 +23,17 @@ impl Lift for swc_common::Span {
             // `comments`, emit a `comments.span_with_comment(...)` expression.
             Some((expr, comment)) => {
                 let text = &*comment.text;
-                let segments = docs::segments(text);
+                let segments: Vec<_> = StandInScanner::new(text).collect();
 
                 // Build a format string, with `{}` placeholders for each
-                // variable placeholder, and collect the corresponding
-                // bound variables for them.
+                // stand-in, and collect the corresponding bound
+                // variables for them.
                 let mut format_str = String::new();
                 let mut vars = vec![];
                 for &segment in &segments {
                     match segment {
-                        CommentSegment::Text(t) => format_str.push_str(t),
-                        CommentSegment::Placeholder(p) => match context.placeholder(p) {
+                        StandInToken::Text(t) => format_str.push_str(t),
+                        StandInToken::StandIn(p) => match context.stand_in(p) {
                             Some(var) => {
                                 format_str.push_str("{}");
                                 vars.push(var);
@@ -49,7 +49,7 @@ impl Lift for swc_common::Span {
                 }
 
                 match &*vars {
-                    // Static comment without placeholders; use the text as-is.
+                    // Static comment without stand-ins; use the text as-is.
                     [] => {
                         parse_quote!(
                             ::quasiquodo::ts::Comments::span_with_comment(
@@ -69,7 +69,7 @@ impl Lift for swc_common::Span {
                         segments
                             .iter()
                             .filter_map(|segment| match segment {
-                                CommentSegment::Text(t) => Some(t.trim()),
+                                StandInToken::Text(t) => Some(t.trim()),
                                 _ => None,
                             })
                             .all(|t| t.is_empty() || t == "*")
@@ -90,7 +90,7 @@ impl Lift for swc_common::Span {
                             }
                         )
                     }
-                    // Other combinations of embedded placeholders produce a
+                    // Other combinations of embedded stand-ins produce a
                     // `format!` expression, with bound variables as arguments.
                     other => {
                         let format_args = other.iter().map(|VarData { ident, ty }| -> syn::Expr {
@@ -211,7 +211,7 @@ impl<T: Lift> Lift for Vec<T> {
 
 impl Lift for Ident {
     fn lift(&self, context: &Context) -> syn::Result<CodeFragment> {
-        match context.placeholder(&self.sym) {
+        match context.stand_in(&self.sym) {
             Some(var) => {
                 let var_ident = var.to_tokens();
                 Ok(match &var.ty {
@@ -254,7 +254,7 @@ impl Lift for Ident {
 
 impl Lift for IdentName {
     fn lift(&self, context: &Context) -> syn::Result<CodeFragment> {
-        match context.placeholder(&self.sym) {
+        match context.stand_in(&self.sym) {
             Some(var) => {
                 let var_ident = var.to_tokens();
                 Ok(match &var.ty {
@@ -290,12 +290,11 @@ impl Lift for IdentName {
     }
 }
 
-/// Custom implementation to detect preprocessed `LitStr` placeholders
-/// (e.g., `"__tsq_0__"`) and substitute the variable's value.
+/// Custom implementation to splice `LitStr` variables.
 impl Lift for Str {
     fn lift(&self, context: &Context) -> syn::Result<CodeFragment> {
         let expr = if let Some(value) = self.value.as_str()
-            && let Some(var) = context.placeholder(value)
+            && let Some(var) = context.stand_in(value)
             && matches!(var.ty, VarType::LitStr)
         {
             let var_ident = var.to_tokens();

@@ -27,7 +27,7 @@ Compile-time TypeScript quasiquoting library. Parses TypeScript source literals 
 
 ```rust
 ts_quote!("string | null" as TsType)
-ts_quote!("foo($arg)" as Expr, arg: Expr = my_expr)
+ts_quote!("foo(#{arg})" as Expr, arg: Expr = my_expr)
 ```
 
 ### Workspace Crates
@@ -44,13 +44,13 @@ ts_quote!("foo($arg)" as Expr, arg: Expr = my_expr)
 
 **`VarType`** (`input.rs`) — The type of a substitution variable. Scalar types mirror `OutputKind` plus literal types (`LitStr`, `LitNum`, `LitBool`), with nestable containers (`Box<T>`, `Vec<T>`, `Option<T>`). `Vec<T>` and `Option<T>` variables splice into list positions.
 
-**Two-phase variable substitution** — Phase 1 (lexer/preprocessing): `$binding` placeholders in the source string are replaced with type-appropriate stand-ins before SWC parses (`LitStr` → `"__tsq_N__"`, others → `__tsq_N__`). Phase 2 (codegen): the `Lift` trait detects placeholders in the parsed AST and injects the variable's Rust expression.
+**Two-phase variable substitution** — Phase 1 (lexer/preprocessing): `#{var}` placeholders in the source string are replaced with type-appropriate stand-ins before SWC parses (`LitStr` → `"__tsq_N__"`, others → `__tsq_N__`). Phase 2 (codegen): the `Lift` trait detects stand-ins in the parsed AST and injects the variable's Rust expression.
 
 **`Lift` trait** (`lift/mod.rs`) — Converts SWC AST nodes into `syn::Expr` that constructs them at runtime. ~100 implementations covering all SWC node types, split across submodules (`primitives`, `expressions`, `statements`, `declarations`, `types`, `modules`). Uses `impl_lift_for_struct!` and `impl_lift_for_enum!` macros for boilerplate.
 
 **`CodeFragment`** (`lift/mod.rs`) — Either `Single(expr)` (a single AST node constructor) or `Splice(expr)` (an iterator for `Vec`/`Option` variables). Splicing bubbles up through containers until caught by a `Vec<T>` position; reaching a non-iterable position is an error.
 
-**`Context`** (`context.rs`) — Manages variable bindings during codegen. Handles span resolution (custom span or `DUMMY_SP`), JSDoc comment extraction from SWC's comment map, and variable lookup by placeholder index.
+**`Context`** (`context.rs`) — Manages variable bindings during codegen. Handles span resolution (custom span or `DUMMY_SP`), JSDoc comment extraction from SWC's comment map, and variable lookup by stand-in.
 
 ---
 
@@ -88,7 +88,7 @@ struct MyView {
 ### Documentation (`///`)
 
 - Complete sentences with periods
-- **Backtick code items.** Anything that appears verbatim in source code: types (`Expr`, `JsDoc`), functions (`lift()`), fields (`span`), macros (`ts_quote!`), syntax (`/*`, `$`), literals (`None`), paths (`crate::lift`). Not general concepts (JSDoc, quasiquoting, placeholder) or project names used as nouns (SWC).
+- **Backtick code items.** Anything that appears verbatim in source code: types (`Expr`, `JsDoc`), functions (`lift()`), fields (`span`), macros (`ts_quote!`), syntax (`/*`, `#{}`), literals (`None`), paths (`crate::lift`). Not general concepts (JSDoc, quasiquoting, placeholder) or project names used as nouns (SWC).
 - Indicative mood ("Returns", not "Return")
 - Describe args/returns in prose, never separate sections
 - Wrap at 80 chars
@@ -159,7 +159,7 @@ if f.discriminator() { continue; }
 - **`lift/` is the largest module.** Use `impl_lift_for_struct!` and `impl_lift_for_enum!` macros for new `Lift` implementations rather than hand-writing them. Follow the field-mapping pattern established by existing impls. Place new impls in the appropriate submodule (`primitives`, `expressions`, `statements`, `declarations`, `types`, `modules`).
 - **Adding a new `OutputKind`:** Add variant to enum, add wrapping/extraction logic in `expand()`, add parsing arm in `OutputKind::parse()`. Follow existing patterns — each variant documents how source is wrapped for SWC parsing.
 - **Adding a new `VarType`:** Add variant to enum, add parsing arm, add placeholder logic in `lexer.rs`, add substitution handling in `lift/`. Ensure `Vec<NewType>` splicing works in appropriate list positions.
-- **Preprocessing invariant:** After `preprocess()`, the source must be valid TypeScript that SWC can parse. Placeholders must be syntactically valid in their position (identifiers or string literals).
+- **Preprocessing invariant:** After `preprocess()`, the source must be valid TypeScript that SWC can parse. Stand-ins must be syntactically valid in their position (identifiers or string literals).
 
 ### quasiquodo
 

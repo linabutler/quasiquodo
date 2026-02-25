@@ -36,7 +36,7 @@ impl SpliceIdent for ImportSpecifier {
         if named.imported.is_some() || named.is_type_only {
             return None;
         }
-        let var = context.placeholder(&named.local.sym)?;
+        let var = context.stand_in(&named.local.sym)?;
         if let VarType::Vec(v) | VarType::Option(v) = &var.ty
             && matches!(**v, VarType::Ident)
         {
@@ -69,7 +69,7 @@ impl SpliceIdent for ExportSpecifier {
         let ModuleExportName::Ident(ident) = &named.orig else {
             return None;
         };
-        let var = context.placeholder(&ident.sym)?;
+        let var = context.stand_in(&ident.sym)?;
         if let VarType::Vec(v) | VarType::Option(v) = &var.ty
             && matches!(**v, VarType::Ident)
         {
@@ -222,17 +222,16 @@ impl Lift for PropName {
         let PropName::Computed(computed) = self else {
             return lift_variants!(self, context, PropName, [Ident, Str, Num, BigInt, Computed]);
         };
-        // Check if this is a placeholder with a `LitStr` variable substitution.
-        // Preprocessing inserts string literal placeholders for `LitStr`
-        // variables, not identifiers.
+        // Check if this is a stand-in for a `LitStr` variable
+        // inserted during preprocessing.
         let var = if let Expr::Lit(Lit::Str(s)) = &*computed.expr
             && let Some(value) = s.value.as_str()
-            && let Some(var) = context.placeholder(value)
+            && let Some(var) = context.stand_in(value)
             && matches!(var.ty, VarType::LitStr)
         {
             Some(var)
         } else if let Expr::Ident(ident) = &*computed.expr
-            && let Some(var) = context.placeholder(&ident.sym)
+            && let Some(var) = context.stand_in(&ident.sym)
             && matches!(var.ty, VarType::LitStr)
         {
             Some(var)

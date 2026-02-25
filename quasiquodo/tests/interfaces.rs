@@ -37,14 +37,14 @@ fn test_interface_with_extends() {
 #[test]
 fn test_interface_prop_litstr_valid_ident() {
     let prop_name = "color";
-    let elem = ts_quote!("@{name}: string" as TsTypeElement, name: LitStr = prop_name);
+    let elem = ts_quote!("#{name}: string" as TsTypeElement, name: LitStr = prop_name);
     assert_eq!(to_code(&elem), "color: string;");
 }
 
 #[test]
 fn test_interface_prop_litstr_needs_quoting() {
     let prop_name = "background-color";
-    let elem = ts_quote!("@{name}: string" as TsTypeElement, name: LitStr = prop_name);
+    let elem = ts_quote!("#{name}: string" as TsTypeElement, name: LitStr = prop_name);
     assert_eq!(to_code(&elem), r#""background-color": string;"#);
 }
 
@@ -58,7 +58,7 @@ fn test_interface_member_vec_splice() {
         ts_quote!("age?: number" as TsTypeElement),
     ];
     let ast = ts_quote!(
-        "export interface @{N} { @{M}; }" as ModuleItem,
+        "export interface #{N} { #{M}; }" as ModuleItem,
         N: Ident = name,
         M: Vec<TsTypeElement> = members
     );
@@ -82,7 +82,7 @@ fn test_interface_extends_vec_splice() {
         ts_quote!("Serializable" as Ident),
     ];
     let ast = ts_quote!(
-        "export interface @{N} extends @{E} { breed: string; }" as ModuleItem,
+        "export interface #{N} extends #{E} { breed: string; }" as ModuleItem,
         N: Ident = name,
         E: Vec<Ident> = extends
     );
@@ -102,7 +102,7 @@ fn test_interface_extends_vec_splice() {
 fn test_interface_member_option_splice_some() {
     let extra: Option<TsTypeElement> = Some(ts_quote!("age?: number" as TsTypeElement));
     let ast = ts_quote!(
-        "export interface Pet { name: string; @{M}; }" as ModuleItem,
+        "export interface Pet { name: string; #{M}; }" as ModuleItem,
         M: Option<TsTypeElement> = extra
     );
     assert_eq!(
@@ -120,7 +120,7 @@ fn test_interface_member_option_splice_some() {
 fn test_interface_member_option_splice_none() {
     let extra: Option<TsTypeElement> = None;
     let ast = ts_quote!(
-        "export interface Pet { name: string; @{M}; }" as ModuleItem,
+        "export interface Pet { name: string; #{M}; }" as ModuleItem,
         M: Option<TsTypeElement> = extra
     );
     assert_eq!(

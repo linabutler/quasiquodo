@@ -110,12 +110,11 @@ pub(crate) use unsplice;
 /// Enables cross-type splicing of `Vec<Ident>` and `Option<Ident>`
 /// variables into container types that can wrap a bare identifier.
 pub(crate) trait SpliceIdent {
-    /// If this node is a placeholder for a `Vec<Ident>` or `Option<Ident>`
+    /// If this node is a stand-in for a `Vec<Ident>` or `Option<Ident>`
     /// variable, returns an iterator expression that maps each `Ident`
     /// into this container type.
     ///
-    /// Returns `None` if this node has additional data,
-    /// or isn't a placeholder.
+    /// Returns `None` if this node isn't a stand-in.
     fn splice_ident(&self, context: &Context) -> Option<syn::Expr>;
 }
 
