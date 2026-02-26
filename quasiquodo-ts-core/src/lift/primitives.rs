@@ -77,9 +77,13 @@ impl Lift for swc_common::Span {
                     } =>
                     {
                         let fallback = context.span();
-                        let format_arg: syn::Expr = match ty.inner() {
-                            VarType::JsDoc => parse_quote!(doc.raw_text()),
-                            _ => parse_quote!(doc),
+                        let format_arg: syn::Expr = if ty.is_str() {
+                            parse_quote!(doc)
+                        } else {
+                            // The lexer restricts comment variable types
+                            // to strings and `JsDoc`s, so this must be a
+                            // `JsDoc`.
+                            parse_quote!(doc.raw_text())
                         };
                         parse_quote!(
                             match #ident {

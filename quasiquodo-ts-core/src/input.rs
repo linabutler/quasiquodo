@@ -236,6 +236,8 @@ pub enum VarType {
 }
 
 impl VarType {
+    /// If this is a wrapper type, returns the wrapped type; otherwise,
+    /// returns `self`.
     #[inline]
     pub fn inner(&self) -> &VarType {
         match self {
@@ -244,14 +246,22 @@ impl VarType {
         }
     }
 
+    /// If this is a pointer type, returns the pointed-to type; otherwise,
+    /// returns `self`.
+    #[inline]
+    pub fn pointee(&self) -> &VarType {
+        match self {
+            Self::Ref(ty) | Self::Box(ty) => ty,
+            other => other,
+        }
+    }
+
+    /// Returns `true` if this is a string-like type (`String`, `&str`,
+    /// or `Box<str>`).
     #[inline]
     pub fn is_str(&self) -> bool {
-        match self {
-            Self::Str(StrVarType::Str | StrVarType::String) => true,
-            Self::Box(inner) => matches!(**inner, Self::Str(StrVarType::Str)),
-            Self::Ref(inner) => matches!(**inner, Self::Str(StrVarType::Str)),
-            _ => false,
-        }
+        matches!(self, VarType::Str(StrVarType::String))
+            || matches!(self.pointee(), VarType::Str(StrVarType::Str))
     }
 
     #[inline]
@@ -292,7 +302,7 @@ impl Parse for VarType {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let (token, span) = if input.peek(Token![&]) {
             let and = input.parse::<Token![&]>()?;
-            ("&".into(), and.span)
+            ("&".to_owned(), and.span)
         } else {
             let ident: Ident = input.parse()?;
             (ident.to_string(), ident.span())
