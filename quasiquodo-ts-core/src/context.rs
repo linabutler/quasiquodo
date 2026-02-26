@@ -2,8 +2,7 @@ use std::cell::RefCell;
 use std::collections::{BTreeMap, HashMap};
 use std::fmt::Display;
 
-use proc_macro2::{Span, TokenStream};
-use quote::{ToTokens, TokenStreamExt, quote};
+use proc_macro2::Span;
 use swc_common::{
     BytePos,
     comments::{Comment, SingleThreadedComments, SingleThreadedCommentsMapInner},
@@ -35,9 +34,8 @@ pub(crate) fn context(
             Entry::Vacant(entry) => {
                 // Emit `let quote_var_Name: <SwcType> = <value>;`.
                 let var_ident = syn::Ident::new(&format!("quote_var_{name}"), Span::mixed_site());
-                let var_ty_path = ty.to_tokens();
                 bindings.push(parse_quote! {
-                    let #var_ident: #var_ty_path = #value;
+                    let #var_ident: #ty = #value;
                 });
                 entry.insert(VarData {
                     ident: var_ident,
@@ -174,23 +172,6 @@ pub(crate) struct VarData {
     pub ident: syn::Ident,
     /// The declared type of this variable.
     pub ty: VarType,
-}
-
-impl VarData {
-    #[inline]
-    pub fn to_tokens(&self) -> VarDataToTokens<'_> {
-        VarDataToTokens(self)
-    }
-}
-
-pub struct VarDataToTokens<'a>(&'a VarData);
-
-impl ToTokens for VarDataToTokens<'_> {
-    #[inline]
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        let ident = &self.0.ident;
-        tokens.append_all(quote!(#ident.clone()));
-    }
 }
 
 /// Data for a single stand-in in the preprocessed source.

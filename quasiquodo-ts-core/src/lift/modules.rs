@@ -40,13 +40,13 @@ impl SpliceIdent for ImportSpecifier {
         if let VarType::Vec(v) | VarType::Option(v) = &var.ty
             && matches!(**v, VarType::Ident)
         {
-            let var_ident = var.to_tokens();
+            let var_ident = &var.ident;
             let sp = context.span();
-            Some(parse_quote!(#var_ident.into_iter().map(|__id| {
+            Some(parse_quote!(#var_ident.iter().cloned().map(|id| {
                 ::quasiquodo::ts::swc::ecma_ast::ImportSpecifier::Named(
                     ::quasiquodo::ts::swc::ecma_ast::ImportNamedSpecifier {
                         span: #sp,
-                        local: __id,
+                        local: id,
                         imported: None,
                         is_type_only: false,
                     },
@@ -73,13 +73,13 @@ impl SpliceIdent for ExportSpecifier {
         if let VarType::Vec(v) | VarType::Option(v) = &var.ty
             && matches!(**v, VarType::Ident)
         {
-            let var_ident = var.to_tokens();
+            let var_ident = &var.ident;
             let sp = context.span();
-            Some(parse_quote!(#var_ident.into_iter().map(|__id| {
+            Some(parse_quote!(#var_ident.iter().cloned().map(|id| {
                 ::quasiquodo::ts::swc::ecma_ast::ExportSpecifier::Named(
                     ::quasiquodo::ts::swc::ecma_ast::ExportNamedSpecifier {
                         span: #sp,
-                        orig: ::quasiquodo::ts::swc::ecma_ast::ModuleExportName::Ident(__id),
+                        orig: ::quasiquodo::ts::swc::ecma_ast::ModuleExportName::Ident(id),
                         exported: None,
                         is_type_only: false,
                     },
@@ -243,19 +243,18 @@ impl Lift for PropName {
             // (not `Computed`, since we have the static value), depending on
             // whether the string variable's value would be a valid identifier.
             Some(var) => {
-                let var_ident = var.to_tokens();
+                let var_ident = &var.ident;
                 let span_expr = context.span();
                 Ok(CodeFragment::Single(parse_quote!({
-                    let name = #var_ident;
-                    if ::quasiquodo::ts::swc::ecma_utils::is_valid_prop_ident(&name) {
+                    if ::quasiquodo::ts::swc::ecma_utils::is_valid_prop_ident(&#var_ident) {
                         ::quasiquodo::ts::swc::ecma_ast::PropName::Ident(::quasiquodo::ts::swc::ecma_ast::IdentName {
                             span: #span_expr,
-                            sym: name.into(),
+                            sym: ::quasiquodo::ts::swc::atoms::Atom::new(#var_ident.clone()),
                         })
                     } else {
                         ::quasiquodo::ts::swc::ecma_ast::PropName::Str(::quasiquodo::ts::swc::ecma_ast::Str {
                             span: #span_expr,
-                            value: name.into(),
+                            value: ::quasiquodo::ts::swc::atoms::Wtf8Atom::new(#var_ident.clone()),
                             raw: None,
                         })
                     }

@@ -28,12 +28,12 @@ impl Lift for Decl {
             && let Some(var) = context.stand_in(&bi.id.sym)
             && matches!(var.ty.inner(), VarType::Decl)
         {
-            let var_ident = var.to_tokens();
+            let var_ident = &var.ident;
             return Ok(match &var.ty {
                 VarType::Vec(_) | VarType::Option(_) => {
-                    CodeFragment::Splice(parse_quote!(#var_ident.into_iter()))
+                    CodeFragment::Splice(parse_quote!(#var_ident.iter().cloned()))
                 }
-                _ => CodeFragment::Single(parse_quote!(#var_ident)),
+                _ => CodeFragment::Single(parse_quote!(#var_ident.clone())),
             });
         }
         lift_variants!(
@@ -261,9 +261,9 @@ impl SpliceIdent for TsExprWithTypeArgs {
         if let VarType::Vec(v) | VarType::Option(v) = &var.ty
             && matches!(**v, VarType::Ident)
         {
-            let var_ident = var.to_tokens();
+            let var_ident = &var.ident;
             let span_expr = context.span();
-            Some(parse_quote!(#var_ident.into_iter().map(|id| {
+            Some(parse_quote!(#var_ident.iter().cloned().map(|id| {
                 ::quasiquodo::ts::swc::ecma_ast::TsExprWithTypeArgs {
                     span: #span_expr,
                     expr: Box::new(::quasiquodo::ts::swc::ecma_ast::Expr::Ident(id)),

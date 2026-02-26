@@ -19,14 +19,14 @@ impl Lift for TsType {
         }) = self
             && let Some(var) = context.stand_in(&ident.sym)
         {
-            let var_ident = var.to_tokens();
+            let var_ident = &var.ident;
             let span_expr = context.span();
             match &var.ty {
                 VarType::Box(inner) if **inner == VarType::TsType => {
-                    return Ok(CodeFragment::Single(parse_quote!(*#var_ident)));
+                    return Ok(CodeFragment::Single(parse_quote!(*#var_ident.clone())));
                 }
                 VarType::TsType => {
-                    return Ok(CodeFragment::Single(parse_quote!(#var_ident)));
+                    return Ok(CodeFragment::Single(parse_quote!(#var_ident.clone())));
                 }
                 ty if ty.is_str() => {
                     return Ok(CodeFragment::Single(
@@ -35,7 +35,7 @@ impl Lift for TsType {
                                 span: #span_expr,
                                 lit: ::quasiquodo::ts::swc::ecma_ast::TsLit::Str(::quasiquodo::ts::swc::ecma_ast::Str {
                                     span: #span_expr,
-                                    value: (#var_ident).into(),
+                                    value: ::quasiquodo::ts::swc::atoms::Wtf8Atom::new(#var_ident.clone()),
                                     raw: None,
                                 }),
                             }
@@ -48,7 +48,7 @@ impl Lift for TsType {
                             ::quasiquodo::ts::swc::ecma_ast::TsLitType {
                                 span: #span_expr,
                                 lit: ::quasiquodo::ts::swc::ecma_ast::TsLit::Number({
-                                    let n = (#var_ident).into();
+                                    let n = ::quasiquodo::ts::swc::ecma_ast::Number::from(#var_ident);
                                     ::quasiquodo::ts::swc::ecma_ast::Number {
                                         span: #span_expr,
                                         ..n
@@ -72,7 +72,9 @@ impl Lift for TsType {
                     ));
                 }
                 VarType::Vec(_) | VarType::Option(_) => {
-                    return Ok(CodeFragment::Splice(parse_quote!(#var_ident.into_iter())));
+                    return Ok(CodeFragment::Splice(
+                        parse_quote!(#var_ident.iter().cloned()),
+                    ));
                 }
                 _ => (),
             }
@@ -87,16 +89,16 @@ impl Lift for TsType {
             && let VarType::Vec(inner) | VarType::Option(inner) = &var.ty
             && inner.is_str()
         {
-            let var_ident = var.to_tokens();
+            let var_ident = &var.ident;
             let span_expr = context.span();
             return Ok(CodeFragment::Splice(parse_quote!(
-                #var_ident.into_iter().map(|__s| {
+                #var_ident.iter().map(|s| {
                     Box::new(::quasiquodo::ts::swc::ecma_ast::TsType::TsLitType(
                         ::quasiquodo::ts::swc::ecma_ast::TsLitType {
                             span: #span_expr,
                             lit: ::quasiquodo::ts::swc::ecma_ast::TsLit::Str(::quasiquodo::ts::swc::ecma_ast::Str {
                                 span: #span_expr,
-                                value: __s.into(),
+                                value: ::quasiquodo::ts::swc::atoms::Wtf8Atom::new(s.clone()),
                                 raw: None,
                             }),
                         }
@@ -286,14 +288,13 @@ impl Lift for TsPropertySignature {
             // and `Lit`, depending on whether the string variable's
             // value would be a valid identifier.
             Some(var) => {
-                let var_ident = var.to_tokens();
+                let var_ident = &var.ident;
                 let span_expr = context.span();
                 parse_quote!(Box::new({
-                    let name = #var_ident;
-                    if ::quasiquodo::ts::swc::ecma_utils::is_valid_prop_ident(&name) {
+                    if ::quasiquodo::ts::swc::ecma_utils::is_valid_prop_ident(&#var_ident) {
                         ::quasiquodo::ts::swc::ecma_ast::Expr::Ident(
                             ::quasiquodo::ts::swc::ecma_ast::Ident::new_no_ctxt(
-                                name.into(),
+                                ::quasiquodo::ts::swc::atoms::Atom::new(#var_ident.clone()),
                                 #span_expr,
                             )
                         )
@@ -301,7 +302,7 @@ impl Lift for TsPropertySignature {
                         ::quasiquodo::ts::swc::ecma_ast::Expr::Lit(::quasiquodo::ts::swc::ecma_ast::Lit::Str(
                             ::quasiquodo::ts::swc::ecma_ast::Str {
                                 span: #span_expr,
-                                value: name.into(),
+                                value: ::quasiquodo::ts::swc::atoms::Wtf8Atom::new(#var_ident.clone()),
                                 raw: None,
                             }
                         ))

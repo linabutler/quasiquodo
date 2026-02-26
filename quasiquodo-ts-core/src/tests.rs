@@ -50,17 +50,16 @@ fn test_expand_with_span_and_variables() {
             span: my_span,
             readonly: false,
             key: Box::new({
-                let name = quote_var_name.clone();
-                if ::quasiquodo::ts::swc::ecma_utils::is_valid_prop_ident(&name) {
+                if ::quasiquodo::ts::swc::ecma_utils::is_valid_prop_ident(&quote_var_name) {
                     ::quasiquodo::ts::swc::ecma_ast::Expr::Ident(::quasiquodo::ts::swc::ecma_ast::Ident::new_no_ctxt(
-                        name.into(),
+                        ::quasiquodo::ts::swc::atoms::Atom::new(quote_var_name.clone()),
                         my_span,
                     ))
                 } else {
                     ::quasiquodo::ts::swc::ecma_ast::Expr::Lit(::quasiquodo::ts::swc::ecma_ast::Lit::Str(
                         ::quasiquodo::ts::swc::ecma_ast::Str {
                             span: my_span,
-                            value: name.into(),
+                            value: ::quasiquodo::ts::swc::atoms::Wtf8Atom::new(quote_var_name.clone()),
                             raw: None,
                         }
                     ))

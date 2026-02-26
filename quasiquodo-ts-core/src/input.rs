@@ -263,11 +263,6 @@ impl VarType {
         matches!(self, VarType::Str(StrVarType::String))
             || matches!(self.pointee(), VarType::Str(StrVarType::Str))
     }
-
-    #[inline]
-    pub fn to_tokens(&self) -> VarTypeToTokens<'_> {
-        VarTypeToTokens(self)
-    }
 }
 
 impl Display for VarType {
@@ -352,6 +347,52 @@ impl Parse for VarType {
     }
 }
 
+impl ToTokens for VarType {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        tokens.append_all(match self {
+            Self::Bool => quote!(bool),
+            Self::ClassMember => quote!(::quasiquodo::ts::swc::ecma_ast::ClassMember),
+            Self::Decl => quote!(::quasiquodo::ts::swc::ecma_ast::Decl),
+            Self::Expr => quote!(::quasiquodo::ts::swc::ecma_ast::Expr),
+            Self::ExportSpecifier => {
+                quote!(::quasiquodo::ts::swc::ecma_ast::ExportSpecifier)
+            }
+            Self::Ident => quote!(::quasiquodo::ts::swc::ecma_ast::Ident),
+            Self::ImportSpecifier => {
+                quote!(::quasiquodo::ts::swc::ecma_ast::ImportSpecifier)
+            }
+            Self::JsDoc => quote!(::quasiquodo::ts::JsDoc),
+            Self::Num(NumVarType::F64) => quote!(f64),
+            Self::Num(NumVarType::Usize) => quote!(usize),
+            Self::Param => quote!(::quasiquodo::ts::swc::ecma_ast::Param),
+            Self::ParamOrTsParamProp => {
+                quote!(::quasiquodo::ts::swc::ecma_ast::ParamOrTsParamProp)
+            }
+            Self::Stmt => quote!(::quasiquodo::ts::swc::ecma_ast::Stmt),
+            Self::Str(StrVarType::Str) => quote!(str),
+            Self::Str(StrVarType::String) => quote!(String),
+            Self::TsType => quote!(::quasiquodo::ts::swc::ecma_ast::TsType),
+            Self::TsTypeElement => quote!(::quasiquodo::ts::swc::ecma_ast::TsTypeElement),
+            Self::Ref(inner) => {
+                let inner = quote!(#inner);
+                quote!(&#inner)
+            }
+            Self::Box(inner) => {
+                let inner = quote!(#inner);
+                quote!(Box<#inner>)
+            }
+            Self::Option(inner) => {
+                let inner = quote!(#inner);
+                quote!(Option<#inner>)
+            }
+            Self::Vec(inner) => {
+                let inner = quote!(#inner);
+                quote!(Vec<#inner>)
+            }
+        });
+    }
+}
+
 /// The concrete Rust type for a [`VarType::Num`].
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum NumVarType {
@@ -364,58 +405,6 @@ pub enum NumVarType {
 pub enum StrVarType {
     Str,
     String,
-}
-
-pub struct VarTypeToTokens<'a>(&'a VarType);
-
-impl ToTokens for VarTypeToTokens<'_> {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        tokens.append_all(match self.0 {
-            VarType::Bool => quote!(bool),
-            VarType::ClassMember => quote!(::quasiquodo::ts::swc::ecma_ast::ClassMember),
-            VarType::Decl => quote!(::quasiquodo::ts::swc::ecma_ast::Decl),
-            VarType::Expr => quote!(::quasiquodo::ts::swc::ecma_ast::Expr),
-            VarType::ExportSpecifier => {
-                quote!(::quasiquodo::ts::swc::ecma_ast::ExportSpecifier)
-            }
-            VarType::Ident => quote!(::quasiquodo::ts::swc::ecma_ast::Ident),
-            VarType::ImportSpecifier => {
-                quote!(::quasiquodo::ts::swc::ecma_ast::ImportSpecifier)
-            }
-            VarType::JsDoc => quote!(::quasiquodo::ts::JsDoc),
-            VarType::Num(NumVarType::F64) => quote!(f64),
-            VarType::Num(NumVarType::Usize) => quote!(usize),
-            VarType::Param => quote!(::quasiquodo::ts::swc::ecma_ast::Param),
-            VarType::ParamOrTsParamProp => {
-                quote!(::quasiquodo::ts::swc::ecma_ast::ParamOrTsParamProp)
-            }
-            VarType::Stmt => quote!(::quasiquodo::ts::swc::ecma_ast::Stmt),
-            VarType::Str(StrVarType::Str) => quote!(str),
-            VarType::Str(StrVarType::String) => quote!(String),
-            VarType::TsType => quote!(::quasiquodo::ts::swc::ecma_ast::TsType),
-            VarType::TsTypeElement => quote!(::quasiquodo::ts::swc::ecma_ast::TsTypeElement),
-            VarType::Ref(inner) => {
-                let quoted = Self(inner);
-                let tokens = quote!(#quoted);
-                quote!(&#tokens)
-            }
-            VarType::Box(inner) => {
-                let quoted = Self(inner);
-                let tokens = quote!(#quoted);
-                quote!(Box<#tokens>)
-            }
-            VarType::Option(inner) => {
-                let quoted = Self(inner);
-                let tokens = quote!(#quoted);
-                quote!(Option<#tokens>)
-            }
-            VarType::Vec(inner) => {
-                let quoted = Self(inner);
-                let tokens = quote!(#quoted);
-                quote!(Vec<#tokens>)
-            }
-        });
-    }
 }
 
 #[derive(Debug, thiserror::Error)]

@@ -15,21 +15,21 @@ impl Lift for Expr {
         if let Expr::Ident(ident) = self
             && let Some(var) = context.stand_in(&ident.sym)
         {
-            let var_ident = var.to_tokens();
+            let var_ident = &var.ident;
             let span_expr = context.span();
             match &var.ty {
                 VarType::Box(inner) if **inner == VarType::Expr => {
-                    return Ok(CodeFragment::Single(parse_quote!(*#var_ident)));
+                    return Ok(CodeFragment::Single(parse_quote!(*#var_ident.clone())));
                 }
                 VarType::Expr => {
-                    return Ok(CodeFragment::Single(parse_quote!(#var_ident)));
+                    return Ok(CodeFragment::Single(parse_quote!(#var_ident.clone())));
                 }
                 ty if ty.is_str() => {
                     return Ok(CodeFragment::Single(
                         parse_quote!(::quasiquodo::ts::swc::ecma_ast::Expr::Lit(::quasiquodo::ts::swc::ecma_ast::Lit::Str(
                             ::quasiquodo::ts::swc::ecma_ast::Str {
                                 span: #span_expr,
-                                value: (#var_ident).into(),
+                                value: ::quasiquodo::ts::swc::atoms::Wtf8Atom::new(#var_ident.clone()),
                                 raw: None,
                             }
                         ))),
@@ -38,7 +38,7 @@ impl Lift for Expr {
                 VarType::Num(_) => {
                     return Ok(CodeFragment::Single(
                         parse_quote!(::quasiquodo::ts::swc::ecma_ast::Expr::Lit(::quasiquodo::ts::swc::ecma_ast::Lit::Num({
-                            let n = (#var_ident).into();
+                            let n = ::quasiquodo::ts::swc::ecma_ast::Number::from(#var_ident);
                             ::quasiquodo::ts::swc::ecma_ast::Number {
                                 span: #span_expr,
                                 ..n
@@ -211,14 +211,13 @@ impl Lift for MemberProp {
             // `Computed`, depending on whether the string variable's value
             // would be a valid identifier.
             Some(var) => {
-                let var_ident = var.to_tokens();
+                let var_ident = &var.ident;
                 let span_expr = context.span();
                 Ok(CodeFragment::Single(parse_quote!({
-                    let name = #var_ident;
-                    if ::quasiquodo::ts::swc::ecma_utils::is_valid_prop_ident(&name) {
+                    if ::quasiquodo::ts::swc::ecma_utils::is_valid_prop_ident(&#var_ident) {
                         ::quasiquodo::ts::swc::ecma_ast::MemberProp::Ident(::quasiquodo::ts::swc::ecma_ast::IdentName {
                             span: #span_expr,
-                            sym: name.into(),
+                            sym: ::quasiquodo::ts::swc::atoms::Atom::new(#var_ident.clone()),
                         })
                     } else {
                         ::quasiquodo::ts::swc::ecma_ast::MemberProp::Computed(::quasiquodo::ts::swc::ecma_ast::ComputedPropName {
@@ -226,7 +225,7 @@ impl Lift for MemberProp {
                             expr: Box::new(::quasiquodo::ts::swc::ecma_ast::Expr::Lit(::quasiquodo::ts::swc::ecma_ast::Lit::Str(
                                 ::quasiquodo::ts::swc::ecma_ast::Str {
                                     span: #span_expr,
-                                    value: name.into(),
+                                    value: ::quasiquodo::ts::swc::atoms::Wtf8Atom::new(#var_ident.clone()),
                                     raw: None,
                                 }
                             ))),

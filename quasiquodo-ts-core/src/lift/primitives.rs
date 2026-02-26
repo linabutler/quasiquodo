@@ -218,11 +218,11 @@ impl Lift for Ident {
     fn lift(&self, context: &Context) -> syn::Result<CodeFragment> {
         match context.stand_in(&self.sym) {
             Some(var) => {
-                let var_ident = var.to_tokens();
+                let var_ident = &var.ident;
                 Ok(match &var.ty {
-                    VarType::Ident => CodeFragment::Single(parse_quote!(#var_ident)),
+                    VarType::Ident => CodeFragment::Single(parse_quote!(#var_ident.clone())),
                     VarType::Vec(_) | VarType::Option(_) => {
-                        CodeFragment::Splice(parse_quote!(#var_ident.into_iter()))
+                        CodeFragment::Splice(parse_quote!(#var_ident.iter().cloned()))
                     }
                     _ => {
                         // This identifier is an antiquotation: a stand-in for
@@ -231,7 +231,7 @@ impl Lift for Ident {
                         // replace the `ClassMember` that contains this `Ident`,
                         // not the `Ident` itself). Propagate the identifier upward
                         // until it reaches its target position.
-                        CodeFragment::Splice(parse_quote!(std::iter::once(#var_ident)))
+                        CodeFragment::Splice(parse_quote!(std::iter::once(#var_ident.clone())))
                     }
                 })
             }
@@ -261,24 +261,23 @@ impl Lift for IdentName {
     fn lift(&self, context: &Context) -> syn::Result<CodeFragment> {
         match context.stand_in(&self.sym) {
             Some(var) => {
-                let var_ident = var.to_tokens();
+                let var_ident = &var.ident;
                 Ok(match &var.ty {
                     VarType::Ident => {
                         // Convert `Ident` variables to `IdentName`s.
-                        let var_ident = var.to_tokens();
                         let span = context.span();
                         CodeFragment::Single(
                             parse_quote!(::quasiquodo::ts::swc::ecma_ast::IdentName {
                                 span: #span,
-                                sym: #var_ident.sym,
+                                sym: ::quasiquodo::ts::swc::atoms::Atom::clone(&#var_ident.sym),
                             }),
                         )
                     }
                     // Same as for `impl Ident` above.
                     VarType::Vec(_) | VarType::Option(_) => {
-                        CodeFragment::Splice(parse_quote!(#var_ident.into_iter()))
+                        CodeFragment::Splice(parse_quote!(#var_ident.iter().cloned()))
                     }
-                    _ => CodeFragment::Splice(parse_quote!(std::iter::once(#var_ident))),
+                    _ => CodeFragment::Splice(parse_quote!(std::iter::once(#var_ident.clone()))),
                 })
             }
             None => {
@@ -302,11 +301,11 @@ impl Lift for Str {
             && let Some(var) = context.stand_in(value)
             && var.ty.is_str()
         {
-            let var_ident = var.to_tokens();
+            let var_ident = &var.ident;
             let span = context.span();
             parse_quote!(::quasiquodo::ts::swc::ecma_ast::Str {
                 span: #span,
-                value: (#var_ident).into(),
+                value: ::quasiquodo::ts::swc::atoms::Wtf8Atom::new(#var_ident.clone()),
                 raw: None,
             })
         } else {

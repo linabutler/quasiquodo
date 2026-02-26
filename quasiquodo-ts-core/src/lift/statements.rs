@@ -22,12 +22,12 @@ impl Lift for Stmt {
             && let Some(var) = context.stand_in(&ident.sym)
             && matches!(var.ty.inner(), VarType::Stmt)
         {
-            let var_ident = var.to_tokens();
+            let var_ident = &var.ident;
             return Ok(match &var.ty {
                 VarType::Vec(_) | VarType::Option(_) => {
-                    CodeFragment::Splice(parse_quote!(#var_ident.into_iter()))
+                    CodeFragment::Splice(parse_quote!(#var_ident.iter().cloned()))
                 }
-                _ => CodeFragment::Single(parse_quote!(#var_ident)),
+                _ => CodeFragment::Single(parse_quote!(#var_ident.clone())),
             });
         }
 
