@@ -19,10 +19,14 @@ impl Lift for Expr {
             let span_expr = context.span();
             match &var.ty {
                 VarType::Box(inner) if **inner == VarType::Expr => {
-                    return Ok(CodeFragment::Single(parse_quote!(*#var_ident.clone())));
+                    return Ok(CodeFragment::Single(parse_quote!(
+                        ::quasiquodo::ts::swc::ecma_ast::Expr::from(*#var_ident.clone())
+                    )));
                 }
                 VarType::Expr => {
-                    return Ok(CodeFragment::Single(parse_quote!(#var_ident.clone())));
+                    return Ok(CodeFragment::Single(parse_quote!(
+                        ::quasiquodo::ts::swc::ecma_ast::Expr::from(#var_ident.clone())
+                    )));
                 }
                 ty if ty.is_str() => {
                     return Ok(CodeFragment::Single(

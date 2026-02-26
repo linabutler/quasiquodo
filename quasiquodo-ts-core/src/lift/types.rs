@@ -23,10 +23,14 @@ impl Lift for TsType {
             let span_expr = context.span();
             match &var.ty {
                 VarType::Box(inner) if **inner == VarType::TsType => {
-                    return Ok(CodeFragment::Single(parse_quote!(*#var_ident.clone())));
+                    return Ok(CodeFragment::Single(parse_quote!(
+                        ::quasiquodo::ts::swc::ecma_ast::TsType::from(*#var_ident.clone())
+                    )));
                 }
                 VarType::TsType => {
-                    return Ok(CodeFragment::Single(parse_quote!(#var_ident.clone())));
+                    return Ok(CodeFragment::Single(parse_quote!(
+                        ::quasiquodo::ts::swc::ecma_ast::TsType::from(#var_ident.clone())
+                    )));
                 }
                 ty if ty.is_str() => {
                     return Ok(CodeFragment::Single(

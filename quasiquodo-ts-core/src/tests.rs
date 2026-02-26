@@ -69,7 +69,9 @@ fn test_expand_with_span_and_variables() {
             optional: false,
             type_ann: Some(Box::new(::quasiquodo::ts::swc::ecma_ast::TsTypeAnn {
                 span: my_span,
-                type_ann: Box::new(quote_var_ty.clone()),
+                type_ann: Box::new(
+                    ::quasiquodo::ts::swc::ecma_ast::TsType::from(quote_var_ty.clone())
+                ),
             })),
         })
     }};

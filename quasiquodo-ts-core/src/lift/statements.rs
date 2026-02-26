@@ -27,7 +27,9 @@ impl Lift for Stmt {
                 VarType::Vec(_) | VarType::Option(_) => {
                     CodeFragment::Splice(parse_quote!(#var_ident.iter().cloned()))
                 }
-                _ => CodeFragment::Single(parse_quote!(#var_ident.clone())),
+                _ => CodeFragment::Single(parse_quote!(
+                    ::quasiquodo::ts::swc::ecma_ast::Stmt::from(#var_ident.clone())
+                )),
             });
         }
 
