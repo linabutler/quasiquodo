@@ -220,7 +220,9 @@ impl Lift for Ident {
             Some(var) => {
                 let var_ident = &var.ident;
                 Ok(match &var.ty {
-                    VarType::Ident => CodeFragment::Single(parse_quote!(#var_ident.clone())),
+                    VarType::Ident => CodeFragment::Single(
+                        parse_quote!(::quasiquodo::ts::swc::ecma_ast::Ident::from(#var_ident.clone())),
+                    ),
                     VarType::Vec(_) | VarType::Option(_) => {
                         CodeFragment::Splice(parse_quote!(#var_ident.iter().cloned()))
                     }
@@ -263,16 +265,10 @@ impl Lift for IdentName {
             Some(var) => {
                 let var_ident = &var.ident;
                 Ok(match &var.ty {
-                    VarType::Ident => {
-                        // Convert `Ident` variables to `IdentName`s.
-                        let span = context.span();
-                        CodeFragment::Single(
-                            parse_quote!(::quasiquodo::ts::swc::ecma_ast::IdentName {
-                                span: #span,
-                                sym: ::quasiquodo::ts::swc::atoms::Atom::clone(&#var_ident.sym),
-                            }),
-                        )
-                    }
+                    // Convert `Ident` variables to `IdentName`s.
+                    VarType::Ident => CodeFragment::Single(
+                        parse_quote!(::quasiquodo::ts::swc::ecma_ast::IdentName::from(#var_ident.clone())),
+                    ),
                     // Same as for `impl Ident` above.
                     VarType::Vec(_) | VarType::Option(_) => {
                         CodeFragment::Splice(parse_quote!(#var_ident.iter().cloned()))

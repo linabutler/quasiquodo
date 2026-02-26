@@ -44,8 +44,8 @@ fn test_expand_with_span_and_variables() {
         span = my_span, "#{name}: #{ty}" as TsTypeElement, name: &str = "foo", ty: TsType = my_ty
     ));
     let expected: syn::Expr = parse_quote! {{
-        let quote_var_name: &str = "foo";
-        let quote_var_ty: ::quasiquodo::ts::swc::ecma_ast::TsType = my_ty;
+        let quote_var_name = "foo";
+        let quote_var_ty = my_ty;
         ::quasiquodo::ts::swc::ecma_ast::TsTypeElement::TsPropertySignature(::quasiquodo::ts::swc::ecma_ast::TsPropertySignature {
             span: my_span,
             readonly: false,
@@ -147,7 +147,7 @@ fn test_expand_dynamic_doc_comment() {
         desc: &str = "hello"
     ));
     let expected: syn::Expr = parse_quote! {{
-        let quote_var_desc: &str = "hello";
+        let quote_var_desc = "hello";
         ::quasiquodo::ts::swc::ecma_ast::TsTypeElement::TsPropertySignature(::quasiquodo::ts::swc::ecma_ast::TsPropertySignature {
             span: ::quasiquodo::ts::Comments::span_with_comment(&my_comments, format!("* {} ", quote_var_desc),),
             readonly: false,
@@ -205,7 +205,7 @@ fn test_expand_jsdoc_variable() {
         doc: JsDoc = my_doc
     ));
     let expected: syn::Expr = parse_quote! {{
-        let quote_var_doc: ::quasiquodo::ts::JsDoc = my_doc;
+        let quote_var_doc = my_doc;
         ::quasiquodo::ts::swc::ecma_ast::TsTypeElement::TsPropertySignature(::quasiquodo::ts::swc::ecma_ast::TsPropertySignature {
             span: ::quasiquodo::ts::Comments::span_with_comment(&my_comments, format!("* {} ", quote_var_doc.raw_text()),),
             readonly: false,
@@ -239,7 +239,7 @@ fn test_expand_option_jsdoc_variable() {
         doc: Option<JsDoc> = my_doc
     ));
     let expected: syn::Expr = parse_quote! {{
-        let quote_var_doc: Option<::quasiquodo::ts::JsDoc> = my_doc;
+        let quote_var_doc = my_doc;
         ::quasiquodo::ts::swc::ecma_ast::TsTypeElement::TsPropertySignature(::quasiquodo::ts::swc::ecma_ast::TsPropertySignature {
             span: match quote_var_doc {
                 Some(ref doc) => ::quasiquodo::ts::Comments::span_with_comment(&my_comments, format!("* {} ", doc.raw_text()),),
@@ -277,7 +277,7 @@ fn test_expand_jsdoc_variable_without_comments() {
         doc: JsDoc = my_doc
     ));
     let expected: syn::Expr = parse_quote! {{
-        let quote_var_doc: ::quasiquodo::ts::JsDoc = my_doc;
+        let quote_var_doc = my_doc;
         ::quasiquodo::ts::swc::ecma_ast::TsTypeElement::TsPropertySignature(::quasiquodo::ts::swc::ecma_ast::TsPropertySignature {
             span: ::quasiquodo::ts::swc::common::DUMMY_SP,
             readonly: false,
@@ -313,7 +313,7 @@ fn test_expand_jsdoc_embedded_in_comment() {
         doc: JsDoc = my_doc
     ));
     let expected: syn::Expr = parse_quote! {{
-        let quote_var_doc: ::quasiquodo::ts::JsDoc = my_doc;
+        let quote_var_doc = my_doc;
         ::quasiquodo::ts::swc::ecma_ast::TsTypeElement::TsPropertySignature(::quasiquodo::ts::swc::ecma_ast::TsPropertySignature {
             span: ::quasiquodo::ts::Comments::span_with_comment(&my_comments, format!("* See {}. ", quote_var_doc.raw_text()),),
             readonly: false,
@@ -347,7 +347,7 @@ fn test_expand_option_jsdoc_embedded_in_comment() {
         doc: Option<JsDoc> = my_doc
     ));
     let expected: syn::Expr = parse_quote! {{
-        let quote_var_doc: Option<::quasiquodo::ts::JsDoc> = my_doc;
+        let quote_var_doc = my_doc;
         ::quasiquodo::ts::swc::ecma_ast::TsTypeElement::TsPropertySignature(::quasiquodo::ts::swc::ecma_ast::TsPropertySignature {
             span: ::quasiquodo::ts::Comments::span_with_comment(&my_comments, format!("* See {}. ", quote_var_doc.as_ref().map(|d| d.raw_text()).unwrap_or_default()),),
             readonly: false,
@@ -383,7 +383,7 @@ fn test_expand_option_str_sole_placeholder() {
         desc: Option<&str> = my_desc
     ));
     let expected: syn::Expr = parse_quote! {{
-        let quote_var_desc: Option<&str> = my_desc;
+        let quote_var_desc = my_desc;
         ::quasiquodo::ts::swc::ecma_ast::TsTypeElement::TsPropertySignature(::quasiquodo::ts::swc::ecma_ast::TsPropertySignature {
             span: match quote_var_desc {
                 Some(ref doc) => ::quasiquodo::ts::Comments::span_with_comment(&my_comments, format!("* {} ", doc),),
@@ -418,10 +418,10 @@ fn test_expand_import_specifier_with_ident_variable() {
         "#{local}" as ImportSpecifier, local: Ident = my_ident
     ));
     let expected: syn::Expr = parse_quote! {{
-        let quote_var_local: ::quasiquodo::ts::swc::ecma_ast::Ident = my_ident;
+        let quote_var_local = my_ident;
         ::quasiquodo::ts::swc::ecma_ast::ImportSpecifier::Named(::quasiquodo::ts::swc::ecma_ast::ImportNamedSpecifier {
             span: ::quasiquodo::ts::swc::common::DUMMY_SP,
-            local: quote_var_local.clone(),
+            local: ::quasiquodo::ts::swc::ecma_ast::Ident::from(quote_var_local.clone()),
             imported: None,
             is_type_only: false,
         })

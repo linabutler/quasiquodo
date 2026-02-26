@@ -136,6 +136,52 @@ fn test_bigint_large() {
     assert_eq!(to_code(&expr), "99999999999999999999999n");
 }
 
+// MARK: `Ident` variable in `IdentName` position
+
+#[test]
+fn test_member_prop_ident_variable() {
+    let prop: Ident = ts_quote!("name" as Ident);
+    let expr: Expr = ts_quote!("this.#{prop}" as Expr, prop: Ident = prop);
+    assert_eq!(to_code(&expr), "this.name");
+}
+
+#[test]
+fn test_member_prop_ident_variable_chained() {
+    let prop: Ident = ts_quote!("bar" as Ident);
+    let expr: Expr = ts_quote!("foo.#{p}.baz" as Expr, p: Ident = prop);
+    assert_eq!(to_code(&expr), "foo.bar.baz");
+}
+
+// MARK: String-to-`Ident` conversion
+
+#[test]
+fn test_ident_from_str() {
+    let name = "foo";
+    let expr: Expr = ts_quote!("#{name}()" as Expr, name: Ident = name);
+    assert_eq!(to_code(&expr), "foo()");
+}
+
+#[test]
+fn test_ident_from_string() {
+    let name = "foo".to_owned();
+    let expr: Expr = ts_quote!("#{name}()" as Expr, name: Ident = name);
+    assert_eq!(to_code(&expr), "foo()");
+}
+
+#[test]
+fn test_ident_name_from_str() {
+    let prop = "name";
+    let expr: Expr = ts_quote!("this.#{prop}" as Expr, prop: Ident = prop);
+    assert_eq!(to_code(&expr), "this.name");
+}
+
+#[test]
+fn test_ident_name_from_string() {
+    let prop = "name".to_owned();
+    let expr: Expr = ts_quote!("this.#{prop}" as Expr, prop: Ident = prop);
+    assert_eq!(to_code(&expr), "this.name");
+}
+
 // MARK: List splices
 
 #[test]

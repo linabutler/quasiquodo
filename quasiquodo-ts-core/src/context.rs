@@ -35,7 +35,7 @@ pub(crate) fn context(
                 // Emit `let quote_var_Name: <SwcType> = <value>;`.
                 let var_ident = syn::Ident::new(&format!("quote_var_{name}"), Span::mixed_site());
                 bindings.push(parse_quote! {
-                    let #var_ident: #ty = #value;
+                    let #var_ident = #value;
                 });
                 entry.insert(VarData {
                     ident: var_ident,
