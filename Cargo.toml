@@ -26,7 +26,7 @@ swc_common = "=18.0.1"
 swc_ecma_ast = "=20.0.1"
 swc_ecma_codegen = "=23.0.0"
 swc_ecma_parser = { version = "=33.0.1", features = ["unstable"] }
-swc_ecma_utils = "=26.0.1"
+swc_ecma_utils = "=27.0.0"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
