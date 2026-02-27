@@ -1,5 +1,10 @@
 [workspace]
-members = ["quasiquodo", "quasiquodo-ts-core", "quasiquodo-ts-macros"]
+members = [
+    "quasiquodo",
+    "quasiquodo-ts",
+    "quasiquodo-ts-core",
+    "quasiquodo-ts-macros",
+]
 resolver = "2"
 
 [workspace.package]
@@ -13,6 +18,7 @@ rust-version = "1.89"
 [workspace.dependencies]
 num-bigint = "0.4"
 quasiquodo = { path = "quasiquodo", version = "0.3.0" }
+quasiquodo-ts = { path = "quasiquodo-ts", version = "0.3.0" }
 quasiquodo-ts-core = { path = "quasiquodo-ts-core", version = "0.3.0" }
 quasiquodo-ts-macros = { path = "quasiquodo-ts-macros", version = "0.3.0" }
 swc_atoms = "=9.0.0"

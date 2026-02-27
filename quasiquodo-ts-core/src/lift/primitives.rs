@@ -16,6 +16,7 @@ use super::{CodeFragment, Lift, impl_lift_for_newtype_enum, impl_lift_for_struct
 
 impl Lift for swc_common::Span {
     fn lift(&self, context: &Context) -> syn::Result<CodeFragment> {
+        let root = context.root();
         let comment = context.take_closest_doc_to(self.lo);
         let expr = match comment.and_then(|comment| context.comments().map(|expr| (expr, comment)))
         {
@@ -52,7 +53,7 @@ impl Lift for swc_common::Span {
                     // Static comment without stand-ins; use the text as-is.
                     [] => {
                         parse_quote!(
-                            ::quasiquodo::ts::Comments::span_with_comment(
+                            #root::Comments::span_with_comment(
                                 &#expr,
                                 #text,
                             )
@@ -87,7 +88,7 @@ impl Lift for swc_common::Span {
                         };
                         parse_quote!(
                             match #ident {
-                                Some(ref doc) => ::quasiquodo::ts::Comments::span_with_comment(
+                                Some(ref doc) => #root::Comments::span_with_comment(
                                     &#expr,
                                     format!(#format_str, #format_arg),
                                 ),
@@ -116,7 +117,7 @@ impl Lift for swc_common::Span {
                             }
                         });
                         parse_quote!(
-                            ::quasiquodo::ts::Comments::span_with_comment(
+                            #root::Comments::span_with_comment(
                                 &#expr,
                                 format!(#format_str, #(#format_args),*),
                             )
@@ -132,9 +133,10 @@ impl Lift for swc_common::Span {
 }
 
 impl Lift for SyntaxContext {
-    fn lift(&self, _: &Context) -> syn::Result<CodeFragment> {
+    fn lift(&self, context: &Context) -> syn::Result<CodeFragment> {
+        let root = context.root();
         Ok(CodeFragment::Single(parse_quote!(
-            ::quasiquodo::ts::swc::common::SyntaxContext::empty()
+            #root::swc::common::SyntaxContext::empty()
         )))
     }
 }
@@ -152,20 +154,22 @@ impl Lift for f64 {
 }
 
 impl Lift for Atom {
-    fn lift(&self, _: &Context) -> syn::Result<CodeFragment> {
+    fn lift(&self, context: &Context) -> syn::Result<CodeFragment> {
+        let root = context.root();
         let val = &**self;
         Ok(CodeFragment::Single(parse_quote!(
-            ::quasiquodo::ts::swc::atoms::atom!(#val)
+            #root::swc::atoms::atom!(#val)
         )))
     }
 }
 
 impl Lift for Wtf8Atom {
-    fn lift(&self, _: &Context) -> syn::Result<CodeFragment> {
+    fn lift(&self, context: &Context) -> syn::Result<CodeFragment> {
+        let root = context.root();
         let bytes = syn::LitByteStr::new(self.as_bytes(), Span::call_site());
         Ok(CodeFragment::Single(parse_quote!(unsafe {
             // Safety: `bytes` came from a `Wtf8Atom` created at compile time.
-            ::quasiquodo::ts::swc::atoms::Wtf8Atom::from_bytes_unchecked(#bytes)
+            #root::swc::atoms::Wtf8Atom::from_bytes_unchecked(#bytes)
         })))
     }
 }
@@ -216,12 +220,13 @@ impl<T: Lift> Lift for Vec<T> {
 
 impl Lift for Ident {
     fn lift(&self, context: &Context) -> syn::Result<CodeFragment> {
+        let root = context.root();
         match context.stand_in(&self.sym) {
             Some(var) => {
                 let var_ident = &var.ident;
                 Ok(match &var.ty {
                     VarType::Ident => CodeFragment::Single(
-                        parse_quote!(::quasiquodo::ts::swc::ecma_ast::Ident::from(#var_ident.clone())),
+                        parse_quote!(#root::swc::ecma_ast::Ident::from(#var_ident.clone())),
                     ),
                     VarType::Vec(_) | VarType::Option(_) => {
                         CodeFragment::Splice(parse_quote!(#var_ident.iter().cloned()))
@@ -241,14 +246,14 @@ impl Lift for Ident {
                 let sym = unsplice!(self.sym.lift(context)?);
                 let span = unsplice!(self.span.lift(context)?);
                 let expr = if self.optional {
-                    parse_quote!(::quasiquodo::ts::swc::ecma_ast::Ident {
+                    parse_quote!(#root::swc::ecma_ast::Ident {
                         sym: #sym,
                         span: #span,
-                        ctxt: ::quasiquodo::ts::swc::common::SyntaxContext::empty(),
+                        ctxt: #root::swc::common::SyntaxContext::empty(),
                         optional: true,
                     })
                 } else {
-                    parse_quote!(::quasiquodo::ts::swc::ecma_ast::Ident::new_no_ctxt(
+                    parse_quote!(#root::swc::ecma_ast::Ident::new_no_ctxt(
                         #sym,
                         #span,
                     ))
@@ -261,13 +266,14 @@ impl Lift for Ident {
 
 impl Lift for IdentName {
     fn lift(&self, context: &Context) -> syn::Result<CodeFragment> {
+        let root = context.root();
         match context.stand_in(&self.sym) {
             Some(var) => {
                 let var_ident = &var.ident;
                 Ok(match &var.ty {
                     // Convert `Ident` variables to `IdentName`s.
                     VarType::Ident => CodeFragment::Single(
-                        parse_quote!(::quasiquodo::ts::swc::ecma_ast::IdentName::from(#var_ident.clone())),
+                        parse_quote!(#root::swc::ecma_ast::IdentName::from(#var_ident.clone())),
                     ),
                     // Same as for `impl Ident` above.
                     VarType::Vec(_) | VarType::Option(_) => {
@@ -280,7 +286,7 @@ impl Lift for IdentName {
                 let span = unsplice!(self.span.lift(context)?);
                 let sym = unsplice!(self.sym.lift(context)?);
                 Ok(CodeFragment::Single(
-                    parse_quote!(::quasiquodo::ts::swc::ecma_ast::IdentName {
+                    parse_quote!(#root::swc::ecma_ast::IdentName {
                         span: #span,
                         sym: #sym,
                     }),
@@ -293,22 +299,23 @@ impl Lift for IdentName {
 /// Custom implementation to splice string variables.
 impl Lift for Str {
     fn lift(&self, context: &Context) -> syn::Result<CodeFragment> {
+        let root = context.root();
         let expr = if let Some(value) = self.value.as_str()
             && let Some(var) = context.stand_in(value)
             && var.ty.is_str()
         {
             let var_ident = &var.ident;
             let span = context.span();
-            parse_quote!(::quasiquodo::ts::swc::ecma_ast::Str {
+            parse_quote!(#root::swc::ecma_ast::Str {
                 span: #span,
-                value: ::quasiquodo::ts::swc::atoms::Wtf8Atom::new(#var_ident.clone()),
+                value: #root::swc::atoms::Wtf8Atom::new(#var_ident.clone()),
                 raw: None,
             })
         } else {
             let span = unsplice!(self.span.lift(context)?);
             let value = unsplice!(self.value.lift(context)?);
             let raw = unsplice!(self.raw.lift(context)?);
-            parse_quote!(::quasiquodo::ts::swc::ecma_ast::Str {
+            parse_quote!(#root::swc::ecma_ast::Str {
                 span: #span,
                 value: #value,
                 raw: #raw,
@@ -327,7 +334,8 @@ impl_lift_for_struct!(Null, [span]);
 impl_lift_for_struct!(Regex, [span, exp, flags]);
 
 impl Lift for num_bigint::BigInt {
-    fn lift(&self, _: &Context) -> syn::Result<CodeFragment> {
+    fn lift(&self, context: &Context) -> syn::Result<CodeFragment> {
+        let root = context.root();
         let (sign_ident, digits) = {
             let (sign, digits) = self.to_u32_digits();
             let sign_ident = syn::Ident::new(
@@ -341,8 +349,8 @@ impl Lift for num_bigint::BigInt {
             (sign_ident, digits)
         };
         Ok(CodeFragment::Single(
-            parse_quote!(::quasiquodo::ts::num_bigint::BigInt::from_slice(
-                ::quasiquodo::ts::num_bigint::Sign::#sign_ident,
+            parse_quote!(#root::num_bigint::BigInt::from_slice(
+                #root::num_bigint::Sign::#sign_ident,
                 &[#(#digits),*],
             )),
         ))

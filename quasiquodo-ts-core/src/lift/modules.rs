@@ -30,6 +30,7 @@ impl_lift_for_struct!(ExportDecl, [span, decl]);
 
 impl SpliceIdent for ImportSpecifier {
     fn splice_ident(&self, context: &Context) -> Option<syn::Expr> {
+        let root = context.root();
         let ImportSpecifier::Named(named) = self else {
             return None;
         };
@@ -43,8 +44,8 @@ impl SpliceIdent for ImportSpecifier {
             let var_ident = &var.ident;
             let sp = context.span();
             Some(parse_quote!(#var_ident.iter().cloned().map(|id| {
-                ::quasiquodo::ts::swc::ecma_ast::ImportSpecifier::Named(
-                    ::quasiquodo::ts::swc::ecma_ast::ImportNamedSpecifier {
+                #root::swc::ecma_ast::ImportSpecifier::Named(
+                    #root::swc::ecma_ast::ImportNamedSpecifier {
                         span: #sp,
                         local: id,
                         imported: None,
@@ -60,6 +61,7 @@ impl SpliceIdent for ImportSpecifier {
 
 impl SpliceIdent for ExportSpecifier {
     fn splice_ident(&self, context: &Context) -> Option<syn::Expr> {
+        let root = context.root();
         let ExportSpecifier::Named(named) = self else {
             return None;
         };
@@ -76,10 +78,10 @@ impl SpliceIdent for ExportSpecifier {
             let var_ident = &var.ident;
             let sp = context.span();
             Some(parse_quote!(#var_ident.iter().cloned().map(|id| {
-                ::quasiquodo::ts::swc::ecma_ast::ExportSpecifier::Named(
-                    ::quasiquodo::ts::swc::ecma_ast::ExportNamedSpecifier {
+                #root::swc::ecma_ast::ExportSpecifier::Named(
+                    #root::swc::ecma_ast::ExportNamedSpecifier {
                         span: #sp,
-                        orig: ::quasiquodo::ts::swc::ecma_ast::ModuleExportName::Ident(id),
+                        orig: #root::swc::ecma_ast::ModuleExportName::Ident(id),
                         exported: None,
                         is_type_only: false,
                     },
@@ -112,8 +114,9 @@ impl Lift for ImportDecl {
 
         let specifiers_expr = splice_idents(specifiers, context)?;
 
+        let root = context.root();
         Ok(CodeFragment::Single(
-            parse_quote!(::quasiquodo::ts::swc::ecma_ast::ImportDecl {
+            parse_quote!(#root::swc::ecma_ast::ImportDecl {
                 span: #span,
                 specifiers: #specifiers_expr,
                 src: #src,
@@ -144,8 +147,9 @@ impl Lift for NamedExport {
 
         let specifiers_expr = splice_idents(specifiers, context)?;
 
+        let root = context.root();
         Ok(CodeFragment::Single(
-            parse_quote!(::quasiquodo::ts::swc::ecma_ast::NamedExport {
+            parse_quote!(#root::swc::ecma_ast::NamedExport {
                 span: #span,
                 specifiers: #specifiers_expr,
                 src: #src,
@@ -219,6 +223,7 @@ impl_lift_for_struct!(MethodProp, [key, function]);
 /// as bare identifier properties where valid.
 impl Lift for PropName {
     fn lift(&self, context: &Context) -> syn::Result<CodeFragment> {
+        let root = context.root();
         let PropName::Computed(computed) = self else {
             return lift_variants!(self, context, PropName, [Ident, Str, Num, BigInt, Computed]);
         };
@@ -246,15 +251,15 @@ impl Lift for PropName {
                 let var_ident = &var.ident;
                 let span_expr = context.span();
                 Ok(CodeFragment::Single(parse_quote!({
-                    if ::quasiquodo::ts::swc::ecma_utils::is_valid_prop_ident(&#var_ident) {
-                        ::quasiquodo::ts::swc::ecma_ast::PropName::Ident(::quasiquodo::ts::swc::ecma_ast::IdentName {
+                    if #root::swc::ecma_utils::is_valid_prop_ident(&#var_ident) {
+                        #root::swc::ecma_ast::PropName::Ident(#root::swc::ecma_ast::IdentName {
                             span: #span_expr,
-                            sym: ::quasiquodo::ts::swc::atoms::Atom::new(#var_ident.clone()),
+                            sym: #root::swc::atoms::Atom::new(#var_ident.clone()),
                         })
                     } else {
-                        ::quasiquodo::ts::swc::ecma_ast::PropName::Str(::quasiquodo::ts::swc::ecma_ast::Str {
+                        #root::swc::ecma_ast::PropName::Str(#root::swc::ecma_ast::Str {
                             span: #span_expr,
-                            value: ::quasiquodo::ts::swc::atoms::Wtf8Atom::new(#var_ident.clone()),
+                            value: #root::swc::atoms::Wtf8Atom::new(#var_ident.clone()),
                             raw: None,
                         })
                     }
@@ -264,7 +269,7 @@ impl Lift for PropName {
             None => {
                 let val = unsplice!(Lift::lift(computed, context)?);
                 Ok(CodeFragment::Single(
-                    parse_quote!(::quasiquodo::ts::swc::ecma_ast::PropName::Computed(#val)),
+                    parse_quote!(#root::swc::ecma_ast::PropName::Computed(#val)),
                 ))
             }
         }

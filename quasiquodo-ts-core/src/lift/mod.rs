@@ -49,7 +49,8 @@ macro_rules! impl_lift_for_struct {
                 $(
                     let $field = crate::lift::unsplice!(Lift::lift($field, context)?);
                 )*
-                Ok(CodeFragment::Single(parse_quote!(::quasiquodo::ts::swc::ecma_ast::$name {
+                let root = context.root();
+                Ok(CodeFragment::Single(parse_quote!(#root::swc::ecma_ast::$name {
                     $($field: #$field,)*
                 })))
             }
@@ -62,8 +63,9 @@ macro_rules! lift_variants {
         match $v {
             $($name::$variant(inner) => {
                 let expr = crate::lift::unsplice!(Lift::lift(inner, $context)?);
+                let root = $context.root();
                 Ok(CodeFragment::Single(parse_quote!(
-                    ::quasiquodo::ts::swc::ecma_ast::$name::$variant(#expr)
+                    #root::swc::ecma_ast::$name::$variant(#expr)
                 )))
             },)*
         }
@@ -88,13 +90,14 @@ macro_rules! impl_lift_for_newtype_enum {
 macro_rules! impl_lift_for_unit_enum {
     ($name:ident, [ $($variant:ident),* ]) => {
         impl Lift for $name {
-            fn lift(&self, _: &Context) -> syn::Result<CodeFragment> {
+            fn lift(&self, context: &Context) -> syn::Result<CodeFragment> {
                 let variant = match self {
                     $($name::$variant => stringify!($variant),)*
                 };
                 let variant_ident = syn::Ident::new(variant, Span::call_site());
+                let root = context.root();
                 Ok(CodeFragment::Single(
-                    parse_quote!(::quasiquodo::ts::swc::ecma_ast::$name::#variant_ident),
+                    parse_quote!(#root::swc::ecma_ast::$name::#variant_ident),
                 ))
             }
         }

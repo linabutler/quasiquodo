@@ -1,6 +1,6 @@
 use indoc::indoc;
-use quasiquodo::ts::{Comments, JsDoc};
-use quasiquodo::ts_quote;
+use quasiquodo_ts::ts_quote;
+use quasiquodo_ts::{Comments, JsDoc};
 use swc_ecma_ast::*;
 use swc_ecma_codegen::to_code_with_comments;
 

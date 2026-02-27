@@ -14,7 +14,8 @@ fn expand_expr(input: proc_macro2::TokenStream) -> syn::Expr {
 
 #[test]
 fn test_expand_with_span_parameter() {
-    let actual = expand_expr(quote!(span = my_span, "name: string" as TsTypeElement));
+    let actual =
+        expand_expr(quote!(::quasiquodo::ts; span = my_span, "name: string" as TsTypeElement));
     let expected: syn::Expr = parse_quote! {{
         ::quasiquodo::ts::swc::ecma_ast::TsTypeElement::TsPropertySignature(::quasiquodo::ts::swc::ecma_ast::TsPropertySignature {
             span: my_span,
@@ -41,7 +42,11 @@ fn test_expand_with_span_parameter() {
 #[test]
 fn test_expand_with_span_and_variables() {
     let actual = expand_expr(quote!(
-        span = my_span, "#{name}: #{ty}" as TsTypeElement, name: &str = "foo", ty: TsType = my_ty
+        ::quasiquodo::ts;
+        span = my_span,
+        "#{name}: #{ty}" as TsTypeElement,
+        name: &str = "foo",
+        ty: TsType = my_ty,
     ));
     let expected: syn::Expr = parse_quote! {{
         let quote_var_name = "foo";
@@ -80,7 +85,10 @@ fn test_expand_with_span_and_variables() {
 
 #[test]
 fn test_expand_without_span_uses_dummy_span() {
-    let actual = expand_expr(quote!("name: string" as TsTypeElement));
+    let actual = expand_expr(quote!(
+        ::quasiquodo::ts;
+        "name: string" as TsTypeElement,
+    ));
     let expected: syn::Expr = parse_quote! {{
         ::quasiquodo::ts::swc::ecma_ast::TsTypeElement::TsPropertySignature(::quasiquodo::ts::swc::ecma_ast::TsPropertySignature {
             span: ::quasiquodo::ts::swc::common::DUMMY_SP,
@@ -112,8 +120,9 @@ fn test_expand_without_span_uses_dummy_span() {
 #[test]
 fn test_expand_static_doc_comment() {
     let actual = expand_expr(quote!(
+        ::quasiquodo::ts;
         comments = my_comments,
-        "/** Fixed. */ name: string" as TsTypeElement
+        "/** Fixed. */ name: string" as TsTypeElement,
     ));
     let expected: syn::Expr = parse_quote! {{
         ::quasiquodo::ts::swc::ecma_ast::TsTypeElement::TsPropertySignature(::quasiquodo::ts::swc::ecma_ast::TsPropertySignature {
@@ -144,9 +153,10 @@ fn test_expand_static_doc_comment() {
 #[test]
 fn test_expand_dynamic_doc_comment() {
     let actual = expand_expr(quote!(
+        ::quasiquodo::ts;
         comments = my_comments,
         "/** #{desc} */ name: string" as TsTypeElement,
-        desc: &str = "hello"
+        desc: &str = "hello",
     ));
     let expected: syn::Expr = parse_quote! {{
         let quote_var_desc = "hello";
@@ -182,7 +192,10 @@ fn test_expand_dynamic_doc_comment() {
 
 #[test]
 fn test_expand_import_specifier_named() {
-    let actual = expand_expr(quote!("Foo" as ImportSpecifier));
+    let actual = expand_expr(quote!(
+        ::quasiquodo::ts;
+        "Foo" as ImportSpecifier,
+    ));
     let expected: syn::Expr = parse_quote! {{
         ::quasiquodo::ts::swc::ecma_ast::ImportSpecifier::Named(::quasiquodo::ts::swc::ecma_ast::ImportNamedSpecifier {
             span: ::quasiquodo::ts::swc::common::DUMMY_SP,
@@ -202,9 +215,10 @@ fn test_expand_import_specifier_named() {
 #[test]
 fn test_expand_jsdoc_variable() {
     let actual = expand_expr(quote!(
+        ::quasiquodo::ts;
         comments = my_comments,
         "#{doc} name: string" as TsTypeElement,
-        doc: JsDoc = my_doc
+        doc: JsDoc = my_doc,
     ));
     let expected: syn::Expr = parse_quote! {{
         let quote_var_doc = my_doc;
@@ -236,9 +250,10 @@ fn test_expand_jsdoc_variable() {
 #[test]
 fn test_expand_option_jsdoc_variable() {
     let actual = expand_expr(quote!(
+        ::quasiquodo::ts;
         comments = my_comments,
         "#{doc} name: string" as TsTypeElement,
-        doc: Option<JsDoc> = my_doc
+        doc: Option<JsDoc> = my_doc,
     ));
     let expected: syn::Expr = parse_quote! {{
         let quote_var_doc = my_doc;
@@ -275,8 +290,9 @@ fn test_expand_jsdoc_variable_without_comments() {
     // Without a `comments` argument to collect them, `JsDoc` variables
     // become dummy spans, effectively dropping them.
     let actual = expand_expr(quote!(
+        ::quasiquodo::ts;
         "#{doc} name: string" as TsTypeElement,
-        doc: JsDoc = my_doc
+        doc: JsDoc = my_doc,
     ));
     let expected: syn::Expr = parse_quote! {{
         let quote_var_doc = my_doc;
@@ -310,9 +326,10 @@ fn test_expand_jsdoc_variable_without_comments() {
 #[test]
 fn test_expand_jsdoc_embedded_in_comment() {
     let actual = expand_expr(quote!(
+        ::quasiquodo::ts;
         comments = my_comments,
         "/** See #{doc}. */ name: string" as TsTypeElement,
-        doc: JsDoc = my_doc
+        doc: JsDoc = my_doc,
     ));
     let expected: syn::Expr = parse_quote! {{
         let quote_var_doc = my_doc;
@@ -344,9 +361,10 @@ fn test_expand_jsdoc_embedded_in_comment() {
 #[test]
 fn test_expand_option_jsdoc_embedded_in_comment() {
     let actual = expand_expr(quote!(
+        ::quasiquodo::ts;
         comments = my_comments,
         "/** See #{doc}. */ name: string" as TsTypeElement,
-        doc: Option<JsDoc> = my_doc
+        doc: Option<JsDoc> = my_doc,
     ));
     let expected: syn::Expr = parse_quote! {{
         let quote_var_doc = my_doc;
@@ -380,9 +398,10 @@ fn test_expand_option_jsdoc_embedded_in_comment() {
 #[test]
 fn test_expand_option_str_sole_placeholder() {
     let actual = expand_expr(quote!(
+        ::quasiquodo::ts;
         comments = my_comments,
         "/** #{desc} */ name: string" as TsTypeElement,
-        desc: Option<&str> = my_desc
+        desc: Option<&str> = my_desc,
     ));
     let expected: syn::Expr = parse_quote! {{
         let quote_var_desc = my_desc;
@@ -417,7 +436,9 @@ fn test_expand_option_str_sole_placeholder() {
 #[test]
 fn test_expand_import_specifier_with_ident_variable() {
     let actual = expand_expr(quote!(
-        "#{local}" as ImportSpecifier, local: Ident = my_ident
+        ::quasiquodo::ts;
+        "#{local}" as ImportSpecifier,
+        local: Ident = my_ident,
     ));
     let expected: syn::Expr = parse_quote! {{
         let quote_var_local = my_ident;

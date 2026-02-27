@@ -53,6 +53,7 @@ pub(crate) fn context(
     };
 
     let context = Context {
+        root: input.root.clone(),
         span_expr: input.span.clone(),
         comments_expr: input.comments.clone(),
         vars,
@@ -91,6 +92,9 @@ pub(crate) fn jsdoc_comments<'a>(
 
 /// Context for variable substitution during code generation.
 pub(crate) struct Context {
+    /// The resolved root path (e.g., `quasiquodo::ts` or
+    /// `quasiquodo_ts`), injected by the declarative macro wrapper.
+    root: syn::Path,
     /// The optional `span` argument passed to the macro.
     span_expr: Option<syn::Expr>,
     /// The optional `comments` argument passed to the macro.
@@ -105,6 +109,12 @@ pub(crate) struct Context {
 }
 
 impl Context {
+    /// Returns the resolved root path for use in generated code.
+    #[inline]
+    pub fn root(&self) -> &syn::Path {
+        &self.root
+    }
+
     /// Looks up a variable by its stand-in (e.g., `__tsq_0__`).
     #[inline]
     pub fn stand_in(&self, value: &str) -> Option<&VarData> {
@@ -122,7 +132,10 @@ impl Context {
     pub fn span(&self) -> syn::Expr {
         match &self.span_expr {
             Some(expr) => expr.clone(),
-            None => syn::parse_quote!(::quasiquodo::ts::swc::common::DUMMY_SP),
+            None => {
+                let root = &self.root;
+                syn::parse_quote!(#root::swc::common::DUMMY_SP)
+            }
         }
     }
 

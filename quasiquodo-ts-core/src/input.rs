@@ -1,7 +1,5 @@
 use std::fmt::Display;
 
-use proc_macro2::TokenStream;
-use quote::{ToTokens, TokenStreamExt, quote};
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
 use syn::{Ident, Token};
@@ -26,6 +24,7 @@ mod kw {
 /// `...vars` parses zero or more [`Variable`]s, declared as
 /// `name: type = value`.
 pub struct MacroInput {
+    pub root: syn::Path,
     pub span: Option<syn::Expr>,
     pub comments: Option<syn::Expr>,
     pub source: syn::LitStr,
@@ -35,6 +34,11 @@ pub struct MacroInput {
 
 impl Parse for MacroInput {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
+        // Parse `<root> ;` prefix injected by the declarative
+        // macro wrapper.
+        let root: syn::Path = input.parse()?;
+        input.parse::<Token![;]>()?;
+
         // Parse optional `span` and `comments` arguments, in either order.
         let mut span: Option<syn::Expr> = None;
         let mut comments: Option<syn::Expr> = None;
@@ -80,6 +84,7 @@ impl Parse for MacroInput {
         };
 
         Ok(Self {
+            root,
             span,
             comments,
             source,
@@ -347,52 +352,6 @@ impl Parse for VarType {
     }
 }
 
-impl ToTokens for VarType {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        tokens.append_all(match self {
-            Self::Bool => quote!(bool),
-            Self::ClassMember => quote!(::quasiquodo::ts::swc::ecma_ast::ClassMember),
-            Self::Decl => quote!(::quasiquodo::ts::swc::ecma_ast::Decl),
-            Self::Expr => quote!(::quasiquodo::ts::swc::ecma_ast::Expr),
-            Self::ExportSpecifier => {
-                quote!(::quasiquodo::ts::swc::ecma_ast::ExportSpecifier)
-            }
-            Self::Ident => quote!(::quasiquodo::ts::swc::ecma_ast::Ident),
-            Self::ImportSpecifier => {
-                quote!(::quasiquodo::ts::swc::ecma_ast::ImportSpecifier)
-            }
-            Self::JsDoc => quote!(::quasiquodo::ts::JsDoc),
-            Self::Num(NumVarType::F64) => quote!(f64),
-            Self::Num(NumVarType::Usize) => quote!(usize),
-            Self::Param => quote!(::quasiquodo::ts::swc::ecma_ast::Param),
-            Self::ParamOrTsParamProp => {
-                quote!(::quasiquodo::ts::swc::ecma_ast::ParamOrTsParamProp)
-            }
-            Self::Stmt => quote!(::quasiquodo::ts::swc::ecma_ast::Stmt),
-            Self::Str(StrVarType::Str) => quote!(str),
-            Self::Str(StrVarType::String) => quote!(String),
-            Self::TsType => quote!(::quasiquodo::ts::swc::ecma_ast::TsType),
-            Self::TsTypeElement => quote!(::quasiquodo::ts::swc::ecma_ast::TsTypeElement),
-            Self::Ref(inner) => {
-                let inner = quote!(#inner);
-                quote!(&#inner)
-            }
-            Self::Box(inner) => {
-                let inner = quote!(#inner);
-                quote!(Box<#inner>)
-            }
-            Self::Option(inner) => {
-                let inner = quote!(#inner);
-                quote!(Option<#inner>)
-            }
-            Self::Vec(inner) => {
-                let inner = quote!(#inner);
-                quote!(Vec<#inner>)
-            }
-        });
-    }
-}
-
 /// The concrete Rust type for a [`VarType::Num`].
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum NumVarType {
@@ -428,7 +387,8 @@ mod tests {
 
     #[test]
     fn test_parse_simple() {
-        let input: MacroInput = parse_str(r#""export type T = string;" as ModuleItem"#).unwrap();
+        let input: MacroInput =
+            parse_str(r#"::quasiquodo::ts; "export type T = string;" as ModuleItem"#).unwrap();
         assert!(matches!(input.output_kind, OutputKind::ModuleItem));
         assert!(input.span.is_none());
         assert!(input.variables.is_empty());
@@ -437,12 +397,14 @@ mod tests {
     #[test]
     fn test_parse_with_span() {
         let input: MacroInput =
-            parse_str(r#"span = my_span, "name: string" as TsTypeElement"#).unwrap();
+            parse_str(r#"::quasiquodo::ts; span = my_span, "name: string" as TsTypeElement"#)
+                .unwrap();
         assert!(matches!(input.output_kind, OutputKind::TsTypeElement));
         assert!(input.span.is_some());
         assert!(input.variables.is_empty());
 
-        let input: MacroInput = parse_str(r#"span, "name: string" as TsTypeElement"#).unwrap();
+        let input: MacroInput =
+            parse_str(r#"::quasiquodo::ts; span, "name: string" as TsTypeElement"#).unwrap();
         assert!(matches!(input.output_kind, OutputKind::TsTypeElement));
         let span = input.span.unwrap();
         let syn::Expr::Path(path) = &span else {
@@ -453,13 +415,16 @@ mod tests {
 
     #[test]
     fn test_parse_with_comments() {
-        let input: MacroInput =
-            parse_str(r#"comments = my_comments, "name: string" as TsTypeElement"#).unwrap();
+        let input: MacroInput = parse_str(
+            r#"::quasiquodo::ts; comments = my_comments, "name: string" as TsTypeElement"#,
+        )
+        .unwrap();
         assert!(matches!(input.output_kind, OutputKind::TsTypeElement));
         assert!(input.comments.is_some());
         assert!(input.variables.is_empty());
 
-        let input: MacroInput = parse_str(r#"comments, "name: string" as TsTypeElement"#).unwrap();
+        let input: MacroInput =
+            parse_str(r#"::quasiquodo::ts; comments, "name: string" as TsTypeElement"#).unwrap();
         assert!(matches!(input.output_kind, OutputKind::TsTypeElement));
         let comments = input.comments.unwrap();
         let syn::Expr::Path(path) = &comments else {
@@ -471,7 +436,7 @@ mod tests {
     #[test]
     fn test_parse_with_span_and_variables() {
         let input: MacroInput = parse_str(
-            r##"span = my_span, "#{name}: #{ty}" as TsTypeElement, name: &str = "foo", ty: TsType = my_ty"##,
+            r##"::quasiquodo::ts; span = my_span, "#{name}: #{ty}" as TsTypeElement, name: &str = "foo", ty: TsType = my_ty"##,
         )
         .unwrap();
         assert!(matches!(input.output_kind, OutputKind::TsTypeElement));
@@ -482,7 +447,7 @@ mod tests {
     #[test]
     fn test_parse_with_variables() {
         let input: MacroInput = parse_str(
-            r##""export type #{Name} = #{T};" as ModuleItem, Name: Ident = name, T: TsType = ty"##,
+            r##"::quasiquodo::ts; "export type #{Name} = #{T};" as ModuleItem, Name: Ident = name, T: TsType = ty"##,
         )
         .unwrap();
         assert!(input.span.is_none());
@@ -495,14 +460,15 @@ mod tests {
 
     #[test]
     fn test_parse_trailing_comma() {
-        let input: MacroInput = parse_str(r#""export type T = string;" as ModuleItem,"#).unwrap();
+        let input: MacroInput =
+            parse_str(r#"::quasiquodo::ts; "export type T = string;" as ModuleItem,"#).unwrap();
         assert!(input.span.is_none());
         assert!(input.variables.is_empty());
     }
 
     #[test]
     fn test_parse_unknown_output_kind() {
-        let result: syn::Result<MacroInput> = parse_str(r#""x" as Bogus"#);
+        let result: syn::Result<MacroInput> = parse_str(r#"::quasiquodo::ts; "x" as Bogus"#);
         assert!(result.is_err());
         let msg = result.err().expect("expected error").to_string();
         assert!(msg.contains("unsupported output kind"));
@@ -633,13 +599,14 @@ mod tests {
 
     #[test]
     fn test_parse_output_kind_param_or_ts_param_prop() {
-        let input: MacroInput = parse_str(r#""x: string" as ParamOrTsParamProp"#).unwrap();
+        let input: MacroInput =
+            parse_str(r#"::quasiquodo::ts; "x: string" as ParamOrTsParamProp"#).unwrap();
         assert!(matches!(input.output_kind, OutputKind::ParamOrTsParamProp));
     }
 
     #[test]
     fn test_parse_output_kind_import_specifier() {
-        let input: MacroInput = parse_str(r#""Foo" as ImportSpecifier"#).unwrap();
+        let input: MacroInput = parse_str(r#"::quasiquodo::ts; "Foo" as ImportSpecifier"#).unwrap();
         assert!(matches!(input.output_kind, OutputKind::ImportSpecifier));
     }
 

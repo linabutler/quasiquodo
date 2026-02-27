@@ -1,5 +1,5 @@
 use indoc::indoc;
-use quasiquodo::ts_quote;
+use quasiquodo_ts::ts_quote;
 use swc_ecma_ast::*;
 use swc_ecma_codegen::to_code;
 

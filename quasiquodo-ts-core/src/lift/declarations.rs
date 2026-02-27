@@ -17,6 +17,7 @@ use super::{
 /// [`Stmt::lift`] wraps them in `Stmt::Decl`.
 impl Lift for Decl {
     fn lift(&self, context: &Context) -> syn::Result<CodeFragment> {
+        let root = context.root();
         if let Decl::Var(decl) = self
             && let [
                 VarDeclarator {
@@ -34,7 +35,7 @@ impl Lift for Decl {
                     CodeFragment::Splice(parse_quote!(#var_ident.iter().cloned()))
                 }
                 _ => CodeFragment::Single(parse_quote!(
-                    ::quasiquodo::ts::swc::ecma_ast::Decl::from(#var_ident.clone())
+                    #root::swc::ecma_ast::Decl::from(#var_ident.clone())
                 )),
             });
         }
@@ -253,6 +254,7 @@ impl_lift_for_struct!(TsTypeAliasDecl, [span, declare, id, type_params, type_ann
 
 impl SpliceIdent for TsExprWithTypeArgs {
     fn splice_ident(&self, context: &Context) -> Option<syn::Expr> {
+        let root = context.root();
         let Expr::Ident(ident) = self.expr.as_ref() else {
             return None;
         };
@@ -266,9 +268,9 @@ impl SpliceIdent for TsExprWithTypeArgs {
             let var_ident = &var.ident;
             let span_expr = context.span();
             Some(parse_quote!(#var_ident.iter().cloned().map(|id| {
-                ::quasiquodo::ts::swc::ecma_ast::TsExprWithTypeArgs {
+                #root::swc::ecma_ast::TsExprWithTypeArgs {
                     span: #span_expr,
-                    expr: Box::new(::quasiquodo::ts::swc::ecma_ast::Expr::Ident(id)),
+                    expr: Box::new(#root::swc::ecma_ast::Expr::Ident(id)),
                     type_args: None,
                 }
             })))
@@ -299,8 +301,9 @@ impl Lift for TsInterfaceDecl {
 
         let extends_expr = splice_idents(extends, context)?;
 
+        let root = context.root();
         Ok(CodeFragment::Single(
-            parse_quote!(::quasiquodo::ts::swc::ecma_ast::TsInterfaceDecl {
+            parse_quote!(#root::swc::ecma_ast::TsInterfaceDecl {
                 span: #span,
                 id: #id,
                 declare: #declare,

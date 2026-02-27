@@ -1,6 +1,6 @@
 [package]
 name = "quasiquodo"
-description = "Compile-time TypeScript quasi-quoting"
+description = "Compile-time quasi-quoting for typed languages"
 version.workspace = true
 license.workspace = true
 edition.workspace = true
@@ -10,21 +10,13 @@ rust-version.workspace = true
 
 [features]
 default = ["ts"]
-ts = [
-    "dep:swc_atoms",
-    "dep:swc_common",
-    "dep:swc_ecma_ast",
-    "dep:swc_ecma_utils",
-]
+ts = ["dep:quasiquodo-ts"]
 
 [dependencies]
-num-bigint = { workspace = true }
-quasiquodo-ts-macros = { workspace = true }
-swc_atoms = { workspace = true, optional = true }
-swc_common = { workspace = true, optional = true }
-swc_ecma_ast = { workspace = true, optional = true }
-swc_ecma_utils = { workspace = true, optional = true }
+quasiquodo-ts = { workspace = true, optional = true }
 
 [dev-dependencies]
-indoc = "2"
 swc_ecma_codegen = { workspace = true }
+
+[lints]
+workspace = true

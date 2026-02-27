@@ -553,6 +553,14 @@ dependencies = [
 name = "quasiquodo"
 version = "0.3.0"
 dependencies = [
+ "quasiquodo-ts",
+ "swc_ecma_codegen",
+]
+
+[[package]]
+name = "quasiquodo-ts"
+version = "0.3.0"
+dependencies = [
  "indoc",
  "num-bigint",
  "quasiquodo-ts-macros",

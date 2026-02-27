@@ -12,6 +12,7 @@ use super::{
 /// Custom implementation to splice `Expr` and literal variables.
 impl Lift for Expr {
     fn lift(&self, context: &Context) -> syn::Result<CodeFragment> {
+        let root = context.root();
         if let Expr::Ident(ident) = self
             && let Some(var) = context.stand_in(&ident.sym)
         {
@@ -20,20 +21,20 @@ impl Lift for Expr {
             match &var.ty {
                 VarType::Box(inner) if **inner == VarType::Expr => {
                     return Ok(CodeFragment::Single(parse_quote!(
-                        ::quasiquodo::ts::swc::ecma_ast::Expr::from(*#var_ident.clone())
+                        #root::swc::ecma_ast::Expr::from(*#var_ident.clone())
                     )));
                 }
                 VarType::Expr => {
                     return Ok(CodeFragment::Single(parse_quote!(
-                        ::quasiquodo::ts::swc::ecma_ast::Expr::from(#var_ident.clone())
+                        #root::swc::ecma_ast::Expr::from(#var_ident.clone())
                     )));
                 }
                 ty if ty.is_str() => {
                     return Ok(CodeFragment::Single(
-                        parse_quote!(::quasiquodo::ts::swc::ecma_ast::Expr::Lit(::quasiquodo::ts::swc::ecma_ast::Lit::Str(
-                            ::quasiquodo::ts::swc::ecma_ast::Str {
+                        parse_quote!(#root::swc::ecma_ast::Expr::Lit(#root::swc::ecma_ast::Lit::Str(
+                            #root::swc::ecma_ast::Str {
                                 span: #span_expr,
-                                value: ::quasiquodo::ts::swc::atoms::Wtf8Atom::new(#var_ident.clone()),
+                                value: #root::swc::atoms::Wtf8Atom::new(#var_ident.clone()),
                                 raw: None,
                             }
                         ))),
@@ -41,9 +42,9 @@ impl Lift for Expr {
                 }
                 VarType::Num(_) => {
                     return Ok(CodeFragment::Single(
-                        parse_quote!(::quasiquodo::ts::swc::ecma_ast::Expr::Lit(::quasiquodo::ts::swc::ecma_ast::Lit::Num({
-                            let n = ::quasiquodo::ts::swc::ecma_ast::Number::from(#var_ident);
-                            ::quasiquodo::ts::swc::ecma_ast::Number {
+                        parse_quote!(#root::swc::ecma_ast::Expr::Lit(#root::swc::ecma_ast::Lit::Num({
+                            let n = #root::swc::ecma_ast::Number::from(#var_ident);
+                            #root::swc::ecma_ast::Number {
                                 span: #span_expr,
                                 ..n
                             }
@@ -52,8 +53,8 @@ impl Lift for Expr {
                 }
                 VarType::Bool => {
                     return Ok(CodeFragment::Single(
-                        parse_quote!(::quasiquodo::ts::swc::ecma_ast::Expr::Lit(::quasiquodo::ts::swc::ecma_ast::Lit::Bool(
-                            ::quasiquodo::ts::swc::ecma_ast::Bool {
+                        parse_quote!(#root::swc::ecma_ast::Expr::Lit(#root::swc::ecma_ast::Lit::Bool(
+                            #root::swc::ecma_ast::Bool {
                                 span: #span_expr,
                                 value: #var_ident,
                             }
@@ -191,6 +192,7 @@ impl_lift_for_struct!(TsSatisfiesExpr, [span, expr, type_ann]);
 /// as bare identifier properties where valid.
 impl Lift for MemberProp {
     fn lift(&self, context: &Context) -> syn::Result<CodeFragment> {
+        let root = context.root();
         let MemberProp::Computed(computed) = self else {
             return lift_variants!(self, context, MemberProp, [Ident, PrivateName, Computed]);
         };
@@ -218,18 +220,18 @@ impl Lift for MemberProp {
                 let var_ident = &var.ident;
                 let span_expr = context.span();
                 Ok(CodeFragment::Single(parse_quote!({
-                    if ::quasiquodo::ts::swc::ecma_utils::is_valid_prop_ident(&#var_ident) {
-                        ::quasiquodo::ts::swc::ecma_ast::MemberProp::Ident(::quasiquodo::ts::swc::ecma_ast::IdentName {
+                    if #root::swc::ecma_utils::is_valid_prop_ident(&#var_ident) {
+                        #root::swc::ecma_ast::MemberProp::Ident(#root::swc::ecma_ast::IdentName {
                             span: #span_expr,
-                            sym: ::quasiquodo::ts::swc::atoms::Atom::new(#var_ident.clone()),
+                            sym: #root::swc::atoms::Atom::new(#var_ident.clone()),
                         })
                     } else {
-                        ::quasiquodo::ts::swc::ecma_ast::MemberProp::Computed(::quasiquodo::ts::swc::ecma_ast::ComputedPropName {
+                        #root::swc::ecma_ast::MemberProp::Computed(#root::swc::ecma_ast::ComputedPropName {
                             span: #span_expr,
-                            expr: Box::new(::quasiquodo::ts::swc::ecma_ast::Expr::Lit(::quasiquodo::ts::swc::ecma_ast::Lit::Str(
-                                ::quasiquodo::ts::swc::ecma_ast::Str {
+                            expr: Box::new(#root::swc::ecma_ast::Expr::Lit(#root::swc::ecma_ast::Lit::Str(
+                                #root::swc::ecma_ast::Str {
                                     span: #span_expr,
-                                    value: ::quasiquodo::ts::swc::atoms::Wtf8Atom::new(#var_ident.clone()),
+                                    value: #root::swc::atoms::Wtf8Atom::new(#var_ident.clone()),
                                     raw: None,
                                 }
                             ))),
@@ -241,7 +243,7 @@ impl Lift for MemberProp {
             None => {
                 let val = unsplice!(Lift::lift(computed, context)?);
                 Ok(CodeFragment::Single(
-                    parse_quote!(::quasiquodo::ts::swc::ecma_ast::MemberProp::Computed(#val)),
+                    parse_quote!(#root::swc::ecma_ast::MemberProp::Computed(#val)),
                 ))
             }
         }

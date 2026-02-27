@@ -11,6 +11,7 @@ use super::{
 
 impl Lift for TsType {
     fn lift(&self, context: &Context) -> syn::Result<CodeFragment> {
+        let root = context.root();
         // Handle `TsType` splices.
         if let TsType::TsTypeRef(TsTypeRef {
             type_name: TsEntityName::Ident(ident),
@@ -24,22 +25,22 @@ impl Lift for TsType {
             match &var.ty {
                 VarType::Box(inner) if **inner == VarType::TsType => {
                     return Ok(CodeFragment::Single(parse_quote!(
-                        ::quasiquodo::ts::swc::ecma_ast::TsType::from(*#var_ident.clone())
+                        #root::swc::ecma_ast::TsType::from(*#var_ident.clone())
                     )));
                 }
                 VarType::TsType => {
                     return Ok(CodeFragment::Single(parse_quote!(
-                        ::quasiquodo::ts::swc::ecma_ast::TsType::from(#var_ident.clone())
+                        #root::swc::ecma_ast::TsType::from(#var_ident.clone())
                     )));
                 }
                 ty if ty.is_str() => {
                     return Ok(CodeFragment::Single(
-                        parse_quote!(::quasiquodo::ts::swc::ecma_ast::TsType::TsLitType(
-                            ::quasiquodo::ts::swc::ecma_ast::TsLitType {
+                        parse_quote!(#root::swc::ecma_ast::TsType::TsLitType(
+                            #root::swc::ecma_ast::TsLitType {
                                 span: #span_expr,
-                                lit: ::quasiquodo::ts::swc::ecma_ast::TsLit::Str(::quasiquodo::ts::swc::ecma_ast::Str {
+                                lit: #root::swc::ecma_ast::TsLit::Str(#root::swc::ecma_ast::Str {
                                     span: #span_expr,
-                                    value: ::quasiquodo::ts::swc::atoms::Wtf8Atom::new(#var_ident.clone()),
+                                    value: #root::swc::atoms::Wtf8Atom::new(#var_ident.clone()),
                                     raw: None,
                                 }),
                             }
@@ -48,12 +49,12 @@ impl Lift for TsType {
                 }
                 VarType::Num(_) => {
                     return Ok(CodeFragment::Single(
-                        parse_quote!(::quasiquodo::ts::swc::ecma_ast::TsType::TsLitType(
-                            ::quasiquodo::ts::swc::ecma_ast::TsLitType {
+                        parse_quote!(#root::swc::ecma_ast::TsType::TsLitType(
+                            #root::swc::ecma_ast::TsLitType {
                                 span: #span_expr,
-                                lit: ::quasiquodo::ts::swc::ecma_ast::TsLit::Number({
-                                    let n = ::quasiquodo::ts::swc::ecma_ast::Number::from(#var_ident);
-                                    ::quasiquodo::ts::swc::ecma_ast::Number {
+                                lit: #root::swc::ecma_ast::TsLit::Number({
+                                    let n = #root::swc::ecma_ast::Number::from(#var_ident);
+                                    #root::swc::ecma_ast::Number {
                                         span: #span_expr,
                                         ..n
                                     }
@@ -64,10 +65,10 @@ impl Lift for TsType {
                 }
                 VarType::Bool => {
                     return Ok(CodeFragment::Single(
-                        parse_quote!(::quasiquodo::ts::swc::ecma_ast::TsType::TsLitType(
-                            ::quasiquodo::ts::swc::ecma_ast::TsLitType {
+                        parse_quote!(#root::swc::ecma_ast::TsType::TsLitType(
+                            #root::swc::ecma_ast::TsLitType {
                                 span: #span_expr,
-                                lit: ::quasiquodo::ts::swc::ecma_ast::TsLit::Bool(::quasiquodo::ts::swc::ecma_ast::Bool {
+                                lit: #root::swc::ecma_ast::TsLit::Bool(#root::swc::ecma_ast::Bool {
                                     span: #span_expr,
                                     value: #var_ident,
                                 }),
@@ -97,12 +98,12 @@ impl Lift for TsType {
             let span_expr = context.span();
             return Ok(CodeFragment::Splice(parse_quote!(
                 #var_ident.iter().map(|s| {
-                    Box::new(::quasiquodo::ts::swc::ecma_ast::TsType::TsLitType(
-                        ::quasiquodo::ts::swc::ecma_ast::TsLitType {
+                    Box::new(#root::swc::ecma_ast::TsType::TsLitType(
+                        #root::swc::ecma_ast::TsLitType {
                             span: #span_expr,
-                            lit: ::quasiquodo::ts::swc::ecma_ast::TsLit::Str(::quasiquodo::ts::swc::ecma_ast::Str {
+                            lit: #root::swc::ecma_ast::TsLit::Str(#root::swc::ecma_ast::Str {
                                 span: #span_expr,
-                                value: ::quasiquodo::ts::swc::atoms::Wtf8Atom::new(s.clone()),
+                                value: #root::swc::atoms::Wtf8Atom::new(s.clone()),
                                 raw: None,
                             }),
                         }
@@ -256,6 +257,7 @@ impl_lift_for_newtype_enum!(
 
 impl Lift for TsPropertySignature {
     fn lift(&self, context: &Context) -> syn::Result<CodeFragment> {
+        let root = context.root();
         let Self {
             span,
             readonly,
@@ -295,18 +297,18 @@ impl Lift for TsPropertySignature {
                 let var_ident = &var.ident;
                 let span_expr = context.span();
                 parse_quote!(Box::new({
-                    if ::quasiquodo::ts::swc::ecma_utils::is_valid_prop_ident(&#var_ident) {
-                        ::quasiquodo::ts::swc::ecma_ast::Expr::Ident(
-                            ::quasiquodo::ts::swc::ecma_ast::Ident::new_no_ctxt(
-                                ::quasiquodo::ts::swc::atoms::Atom::new(#var_ident.clone()),
+                    if #root::swc::ecma_utils::is_valid_prop_ident(&#var_ident) {
+                        #root::swc::ecma_ast::Expr::Ident(
+                            #root::swc::ecma_ast::Ident::new_no_ctxt(
+                                #root::swc::atoms::Atom::new(#var_ident.clone()),
                                 #span_expr,
                             )
                         )
                     } else {
-                        ::quasiquodo::ts::swc::ecma_ast::Expr::Lit(::quasiquodo::ts::swc::ecma_ast::Lit::Str(
-                            ::quasiquodo::ts::swc::ecma_ast::Str {
+                        #root::swc::ecma_ast::Expr::Lit(#root::swc::ecma_ast::Lit::Str(
+                            #root::swc::ecma_ast::Str {
                                 span: #span_expr,
-                                value: ::quasiquodo::ts::swc::atoms::Wtf8Atom::new(#var_ident.clone()),
+                                value: #root::swc::atoms::Wtf8Atom::new(#var_ident.clone()),
                                 raw: None,
                             }
                         ))
@@ -322,7 +324,7 @@ impl Lift for TsPropertySignature {
         let type_ann = unsplice!(Lift::lift(type_ann, context)?);
 
         Ok(CodeFragment::Single(
-            parse_quote!(::quasiquodo::ts::swc::ecma_ast::TsPropertySignature {
+            parse_quote!(#root::swc::ecma_ast::TsPropertySignature {
                 span: #span,
                 readonly: #readonly,
                 key: #key,

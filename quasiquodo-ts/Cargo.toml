@@ -1,0 +1,24 @@
+[package]
+name = "quasiquodo-ts"
+description = "Compile-time TypeScript quasi-quoting"
+version.workspace = true
+license.workspace = true
+edition.workspace = true
+repository.workspace = true
+keywords.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+num-bigint = { workspace = true }
+quasiquodo-ts-macros = { workspace = true }
+swc_atoms = { workspace = true }
+swc_common = { workspace = true }
+swc_ecma_ast = { workspace = true }
+swc_ecma_utils = { workspace = true }
+
+[dev-dependencies]
+indoc = "2"
+swc_ecma_codegen = { workspace = true }
+
+[lints]
+workspace = true

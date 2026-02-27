@@ -16,6 +16,7 @@ use super::{CodeFragment, Lift, impl_lift_for_newtype_enum, impl_lift_for_struct
 /// `Decl` splices, so this implementation wraps those splices in `Stmt::Decl`.
 impl Lift for Stmt {
     fn lift(&self, context: &Context) -> syn::Result<CodeFragment> {
+        let root = context.root();
         // Handle `Stmt` splices.
         if let Stmt::Expr(ExprStmt { expr, .. }) = self
             && let Expr::Ident(ident) = &**expr
@@ -28,7 +29,7 @@ impl Lift for Stmt {
                     CodeFragment::Splice(parse_quote!(#var_ident.iter().cloned()))
                 }
                 _ => CodeFragment::Single(parse_quote!(
-                    ::quasiquodo::ts::swc::ecma_ast::Stmt::from(#var_ident.clone())
+                    #root::swc::ecma_ast::Stmt::from(#var_ident.clone())
                 )),
             });
         }
@@ -37,10 +38,10 @@ impl Lift for Stmt {
         if let Stmt::Decl(inner) = self {
             return Ok(match inner.lift(context)? {
                 CodeFragment::Single(expr) => CodeFragment::Single(parse_quote!(
-                    ::quasiquodo::ts::swc::ecma_ast::Stmt::Decl(#expr)
+                    #root::swc::ecma_ast::Stmt::Decl(#expr)
                 )),
                 CodeFragment::Splice(expr) => CodeFragment::Splice(parse_quote!(
-                    (#expr).map(::quasiquodo::ts::swc::ecma_ast::Stmt::Decl)
+                    (#expr).map(#root::swc::ecma_ast::Stmt::Decl)
                 )),
             });
         }

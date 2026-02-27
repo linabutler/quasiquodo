@@ -34,7 +34,8 @@ ts_quote!("foo(#{arg})" as Expr, arg: Expr = my_expr)
 
 | Crate | Purpose |
 |-------|---------|
-| **quasiquodo** | Public API: re-exports macros and `swc_ecma_utils`; integration tests |
+| **quasiquodo** | Umbrella crate: re-exports language-specific crates behind feature flags |
+| **quasiquodo-ts** | TypeScript public API: `ts_quote!` macro, `Comments`, `JsDoc`, SWC re-exports; integration tests |
 | **quasiquodo-ts-core** | Core logic: input parsing, preprocessing, SWC parsing, AST-to-Rust codegen |
 | **quasiquodo-ts-macros** | Thin proc-macro shim that delegates to `quasiquodo-ts-core` |
 
@@ -161,10 +162,15 @@ if f.discriminator() { continue; }
 - **Adding a new `VarType`:** Add variant to enum, add parsing arm, add placeholder logic in `lexer.rs`, add substitution handling in `lift/`. Ensure `Vec<NewType>` splicing works in appropriate list positions.
 - **Preprocessing invariant:** After `preprocess()`, the source must be valid TypeScript that SWC can parse. Stand-ins must be syntactically valid in their position (identifiers or string literals).
 
+### quasiquodo-ts
+
+- **Integration tests only.** No library logic lives here beyond re-exports and the `Comments`/`JsDoc` types.
+- **Test pattern:** Each test file covers one `OutputKind` or feature. Tests call `ts_quote!`, convert the result to a code string via SWC's `to_code()`, and assert against expected TypeScript output using `indoc::indoc!`.
+
 ### quasiquodo
 
-- **Integration tests only.** No library logic lives here — it re-exports from the other crates.
-- **Test pattern:** Each test file covers one `OutputKind` or feature. Tests call `ts_quote!`, convert the result to a code string via SWC's `to_code()`, and assert against expected TypeScript output using `indoc::indoc!`.
+- **Umbrella crate.** Re-exports language-specific crates (`quasiquodo-ts`) behind feature flags. No library logic.
+- **Smoke tests only.** A minimal test verifies the macro routing works through the facade.
 
 ---
 
