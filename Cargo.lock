@@ -565,8 +565,8 @@ dependencies = [
  "num-bigint",
  "quasiquodo-ts-macros",
  "swc_atoms",
- "swc_common",
- "swc_ecma_ast",
+ "swc_common 18.0.1",
+ "swc_ecma_ast 20.0.1",
  "swc_ecma_codegen",
  "swc_ecma_utils",
 ]
@@ -580,8 +580,8 @@ dependencies = [
  "proc-macro2",
  "quote",
  "swc_atoms",
- "swc_common",
- "swc_ecma_ast",
+ "swc_common 18.0.1",
+ "swc_ecma_ast 20.0.1",
  "swc_ecma_codegen",
  "swc_ecma_parser",
  "swc_ecma_utils",
@@ -830,6 +830,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "swc_common"
+version = "19.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "623a4ee8bb19d87de6fc781e44e1696af20136d1c1eabf9f3712ff1fb50b6189"
+dependencies = [
+ "anyhow",
+ "ast_node",
+ "better_scoped_tls",
+ "bytes-str",
+ "either",
+ "from_variant",
+ "num-bigint",
+ "once_cell",
+ "rustc-hash",
+ "serde",
+ "siphasher 0.3.11",
+ "swc_atoms",
+ "swc_eq_ignore_macros",
+ "swc_visit",
+ "tracing",
+ "unicode-width",
+ "url",
+]
+
+[[package]]
 name = "swc_ecma_ast"
 version = "20.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -843,16 +868,35 @@ dependencies = [
  "rustc-hash",
  "string_enum",
  "swc_atoms",
- "swc_common",
+ "swc_common 18.0.1",
+ "swc_visit",
+ "unicode-id-start",
+]
+
+[[package]]
+name = "swc_ecma_ast"
+version = "21.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "27111582629a1cc116f9cffa6bfa501e6c849e0e66fafdf78cd404dce919117d"
+dependencies = [
+ "bitflags",
+ "is-macro",
+ "num-bigint",
+ "once_cell",
+ "phf",
+ "rustc-hash",
+ "string_enum",
+ "swc_atoms",
+ "swc_common 19.0.0",
  "swc_visit",
  "unicode-id-start",
 ]
 
 [[package]]
 name = "swc_ecma_codegen"
-version = "23.0.0"
+version = "24.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "56116de786118dce35e90b612a1f4d952116dd2728ecb197c8064cfccf527baf"
+checksum = "50b8dbdc2be434883934cda8c3f6638130390032c44e1952e543252fcafd67e0"
 dependencies = [
  "ascii",
  "compact_str",
@@ -865,8 +909,8 @@ dependencies = [
  "serde",
  "swc_allocator",
  "swc_atoms",
- "swc_common",
- "swc_ecma_ast",
+ "swc_common 19.0.0",
+ "swc_ecma_ast 21.0.0",
  "swc_ecma_codegen_macros",
  "tracing",
 ]
@@ -898,8 +942,8 @@ dependencies = [
  "smartstring",
  "stacker",
  "swc_atoms",
- "swc_common",
- "swc_ecma_ast",
+ "swc_common 18.0.1",
+ "swc_ecma_ast 20.0.1",
  "tracing",
 ]
 
@@ -916,8 +960,8 @@ dependencies = [
  "par-core",
  "rustc-hash",
  "swc_atoms",
- "swc_common",
- "swc_ecma_ast",
+ "swc_common 18.0.1",
+ "swc_ecma_ast 20.0.1",
  "swc_ecma_visit",
  "tracing",
 ]
@@ -931,8 +975,8 @@ dependencies = [
  "new_debug_unreachable",
  "num-bigint",
  "swc_atoms",
- "swc_common",
- "swc_ecma_ast",
+ "swc_common 18.0.1",
+ "swc_ecma_ast 20.0.1",
  "swc_visit",
  "tracing",
 ]
