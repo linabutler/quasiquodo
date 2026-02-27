@@ -19,7 +19,7 @@ swc_atoms = "=9.0.0"
 swc_common = "=18.0.1"
 swc_ecma_ast = "=20.0.1"
 swc_ecma_codegen = "=23.0.0"
-swc_ecma_parser = { version = "=33.0.1", features = ["unstable"] }
+swc_ecma_parser = { version = "=35.0.0", features = ["unstable"] }
 swc_ecma_utils = "=26.0.1"
 
 [workspace.lints.rust]
