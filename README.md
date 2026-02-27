@@ -8,7 +8,7 @@
 
 Quasiquodo is a Rust macro that turns inline TypeScript into correct-by-construction syntax trees, giving you TypeScript ergonomics with compile-time type safety.
 
-Instead of writing your syntax tree by hand:
+Instead of building a syntax tree by hand:
 
 ```rust
 let ast = TsType::TsUnionOrIntersectionType(
@@ -28,7 +28,7 @@ let ast = TsType::TsUnionOrIntersectionType(
 );
 ```
 
-Quasiquodo lets you write:
+...Quasiquodo lets you write:
 
 ```rust
 let ast = ts_quote!("string | null" as TsType);
@@ -43,7 +43,7 @@ Add Quasiquodo to your `Cargo.toml`:
 quasiquodo = "0.3"
 ```
 
-Quasiquodo uses [SWC](https://swc.rs) to parse TypeScript. It [re-exports SWC's syntax tree nodes](https://docs.rs/quasiquodo/latest/quasiquodo/ts/swc/index.html), but you'll need to add any SWC crates that you use directly—like `swc_ecma_codegen` for code generation—as separate dependencies.
+Quasiquodo uses [SWC](https://swc.rs) to parse TypeScript, and [re-exports its syntax tree types](https://docs.rs/quasiquodo/latest/quasiquodo/ts/swc/index.html). Any SWC crates you use directly—like `swc_ecma_codegen` for code generation—must be added as separate dependencies.
 
 ### Minimum supported Rust version
 
@@ -53,7 +53,7 @@ Quasiquodo's minimum supported Rust version (MSRV) is **Rust 1.89.0**. The MSRV 
 
 ### Basic quoting
 
-The `ts_quote!` macro takes a TypeScript source string and an output kind, and returns the corresponding [`swc_ecma_ast`](https://rustdoc.swc.rs/swc_ecma_ast/) type:
+`ts_quote!` takes a TypeScript source string and an output kind, and returns the corresponding [`swc_ecma_ast`](https://rustdoc.swc.rs/swc_ecma_ast/) node:
 
 ```rust
 use quasiquodo::ts_quote;
@@ -62,7 +62,7 @@ use quasiquodo::ts::swc::ecma_ast::*;
 let ast = ts_quote!("string | null" as TsType);
 ```
 
-The output kind—`TsType`, `Expr`, `ModuleItem`, and so on—tells `ts_quote!` how to parse the source, and which type of syntax tree node to return. You can quote any TypeScript construct that has a corresponding output kind:
+The output kind—`TsType`, `Expr`, `ModuleItem`, and so on—tells `ts_quote!` how to parse the source and what type to return. You can quote any TypeScript construct that has an output kind:
 
 ```rust
 let ty = ts_quote!("Record<string, number>" as TsType);
@@ -74,7 +74,7 @@ let iface = ts_quote!("interface Pet { name: string; age?: number; }" as Decl);
 
 ### Variable substitution
 
-You can use `#{var}` placeholders to splice variables into the TypeScript syntax tree that `ts_quote!` builds. Each variable is declared with a name, type, and value:
+`#{var}` placeholders splice variables into the syntax tree. Each variable is declared with a name, type, and value:
 
 ```rust
 let name = ts_quote!("Pet" as Ident);
@@ -99,7 +99,36 @@ let ast = ts_quote!(
 // => `import type { Pet } from "./types";`
 ```
 
-`&str`, `String`, `f64`, `usize`, and `bool` variables replace their placeholders with literal values. String variables in property name and member access positions simplify to plain identifiers when their values are valid identifiers:
+Variables accept any value that converts into their declared type, not just the exact type. You can pass inner types without wrapping them in their containing variants, or pass strings as identifiers:
+
+```rust
+// A `Decl` can be passed where a `Stmt` is expected.
+let type_alias = ts_quote!("type Id = string" as Decl);
+let ast = ts_quote!("{ #{s} }" as Stmt, s: Stmt = type_alias);
+
+// An `Ident` variable can be passed as a `String` or `&str`.
+let name = "greet";
+let ast = ts_quote!("#{name}()" as Expr, name: Ident = name);
+// => `greet()`
+```
+
+`&str`, `String`, `f64`, `usize`, and `bool` variables become literals:
+
+```rust
+let greeting = "hello";
+let count = 3.0;
+let verbose = true;
+
+let ast = ts_quote!(
+    "greet(#{g}, #{n}, #{v})" as Expr,
+    g: &str = greeting,
+    n: f64 = count,
+    v: bool = verbose,
+);
+// => `greet("hello", 3, true)`
+```
+
+In property name and member access positions, string variables simplify to plain identifiers when the value is a valid identifier:
 
 ```rust
 let name = "color";
@@ -121,17 +150,17 @@ let ast = ts_quote!("foo[#{f}]" as Expr, f: &str = field);
 
 ### Splicing
 
-`Vec<T>` variables splice naturally into list positions:
+`Vec<T>` variables splice into list positions:
 
-- Union and intersection type arms.
-- Interface `extends` clauses.
-- Interface and class bodies.
-- Function and constructor parameter lists.
-- Call expression arguments.
-- Array literal elements.
-- Object literal members.
-- Import and export specifier lists.
-- Block statement bodies.
+- Union and intersection type arms
+- Interface `extends` clauses
+- Interface and class bodies
+- Function and constructor parameter lists
+- Call expression arguments
+- Array literal elements
+- Object literal members
+- Import and export specifier lists
+- Block statement bodies
 
 ```rust
 let name = ts_quote!("Pet" as Ident);
@@ -156,7 +185,7 @@ export interface Pet {
 }
 ```
 
-Some positions, like union and intersection types, require `Box<T>` wrapping:
+Some positions, such as union and intersection types, use `Box<T>` wrapping:
 
 ```rust
 let extra = vec![
@@ -171,7 +200,7 @@ let ast = ts_quote!(
 // => `string | number | boolean`
 ```
 
-`Option<T>` conditionally includes a single element:
+`Option<T>` conditionally includes a value:
 
 ```rust
 let extra = if include_age {
@@ -188,7 +217,7 @@ let ast = ts_quote!(
 
 ### Custom spans
 
-The optional `span` parameter applies a custom [`Span`](https://rustdoc.swc.rs/swc_core/common/struct.Span.html) to all nodes in the returned syntax tree, which is useful for pointing diagnostics to the right source location:
+The optional `span` parameter applies a custom [`Span`](https://rustdoc.swc.rs/swc_core/common/struct.Span.html) to every node in the returned tree, useful for pointing diagnostics to the right source location:
 
 ```rust
 use quasiquodo::ts::swc::common::{BytePos, Span};
@@ -216,7 +245,7 @@ let ast = ts_quote!(
 );
 ```
 
-The optional `comments` parameter collects comments for code generation. Rendering them requires [`swc_ecma_codegen`](https://rustdoc.swc.rs/swc_ecma_codegen/), which you'll need to add as a separate dependency:
+The optional `comments` parameter collects comments for code generation. Rendering them requires [`swc_ecma_codegen`](https://rustdoc.swc.rs/swc_ecma_codegen/), added as a separate dependency:
 
 ```rust
 use swc_ecma_codegen::to_code_with_comments; // From the `swc_ecma_codegen` crate.
@@ -236,7 +265,7 @@ let code = to_code_with_comments(Some(&*comments), &ast);
 // => `/** The pet's name is required. */ name: string;`
 ```
 
-For more complex uses, `JsDoc` variables let you attach pre-built JSDoc comments to nodes. Each comment is attached to the syntax tree node that follows it:
+For more complex uses, `JsDoc` variables attach pre-built JSDoc comments to nodes. Each comment attaches to the syntax tree node that follows it:
 
 ```rust
 use quasiquodo::ts::{Comments, JsDoc};
@@ -274,7 +303,7 @@ let ast = ts_quote!(
 // => `/** This is a pet. */ name: string;`
 ```
 
-`Option<JsDoc>`, `Option<&str>`, and `Option<String>` conditionally attach comments. When the value is `None`, no comment is emitted:
+`Option<JsDoc>`, `Option<&str>`, and `Option<String>` conditionally attach comments. `None` emits no comment:
 
 ```rust
 let doc = if include_docs {
@@ -288,11 +317,11 @@ let ast = ts_quote!(
     "#{doc} name: string" as TsTypeElement,
     doc: Option<JsDoc> = doc,
 );
-// Either `/** The pet's name. */ name: string;` or
-// `name: string;`, depending on `doc`.
+// `/** The pet's name. */ name: string;` or `name: string;`,
+// depending on `doc`.
 ```
 
-`JsDoc` variables propagate through multiple levels of `ts_quote!`, so you can build a documented member first, then splice it into a larger structure:
+`JsDoc` variables are preserved across nested `ts_quote!` calls, so you can document a member first, then splice it into a larger structure:
 
 ```rust
 let comments = Comments::new();
@@ -326,7 +355,7 @@ class Pet {
 
 ### Output kinds
 
-The output kind tells `ts_quote!` which [`swc_ecma_ast`](https://rustdoc.swc.rs/swc_ecma_ast/) type to parse from the source.
+The output kind tells `ts_quote!` which [`swc_ecma_ast`](https://rustdoc.swc.rs/swc_ecma_ast/) type to return.
 
 | Output kind | AST type | Example source |
 |-------------|----------|----------------|
@@ -363,11 +392,11 @@ Variables can be scalar, boxed, or container types.
 | `ExportSpecifier` | `ExportSpecifier` | An export specifier |
 | `Decl` | `Decl` | A declaration |
 | `JsDoc` | `JsDoc` | A pre-built JSDoc comment |
-| `&str` | `&str` | A string slice in literal position |
-| `String` | `String` | An owned string in literal position |
-| `f64` | `f64` | A floating-point number in literal position |
-| `usize` | `usize` | An integer in literal position |
-| `bool` | `bool` | A Boolean in literal position |
+| `&str` | `&str` | A string slice, in literal position |
+| `String` | `String` | An owned string, in literal position |
+| `f64` | `f64` | A floating-point number, in literal position |
+| `usize` | `usize` | An integer, in literal position |
+| `bool` | `bool` | A Boolean, in literal position |
 
 **Container types** wrap any scalar type:
 
@@ -379,22 +408,22 @@ Variables can be scalar, boxed, or container types.
 
 ## How It Works
 
-`ts_quote!` is a procedural macro that expands to a pure Rust block expression—no parsing, just construction code. All TypeScript parsing happens at compile time.
+`ts_quote!` is a procedural macro that expands into a pure Rust block expression—no runtime parsing, just construction code. All TypeScript parsing happens at compile time.
 
-When the macro runs, it first replaces `#{var}` placeholders with syntactically appropriate stand-ins, ensuring that the preprocessed source is valid TypeScript. It then parses that source with `swc_ecma_parser`, and extracts the requested output type from the AST.
+When the macro runs, it replaces `#{var}` placeholders with syntactically appropriate stand-ins, so that the preprocessed source becomes valid TypeScript. It then parses that source with `swc_ecma_parser`, and extracts the requested output type from the AST.
 
-The interesting part comes next: Quasiquodo _unparses_ the AST, turning each syntax node into a Rust expression that constructs the equivalent node in your program. As the macro does this, it replaces the `#{var}` stand-ins with the bound variables. The result is Rust code that builds the AST directly.
+The interesting part comes next: Quasiquodo _unparses_ the AST, turning each node into a Rust expression that constructs the equivalent node in your program. Along the way, it replaces the stand-ins with the bound variables. The result is Rust code that builds the AST directly.
 
 ## Contributing
 
 We love contributions!
 
-If you find a case where Quasiquodo fails, generates incorrect output, or doesn't support an output kind that you need, please [open an issue](https://github.com/linabutler/quasiquodo/issues/new) with a minimal reproducing `ts_quote!` invocation.
+If you find a case where Quasiquodo fails, generates incorrect output, or lacks an output kind you need, please [open an issue](https://github.com/linabutler/quasiquodo/issues/new) with a minimal reproducing `ts_quote!` invocation.
 
-For questions, or for planning larger contributions, please [start a discussion](https://github.com/linabutler/quasiquodo/discussions).
+For questions or larger contributions, please [start a discussion](https://github.com/linabutler/quasiquodo/discussions).
 
 Quasiquodo follows [the Ghostty project's AI Usage policy](https://github.com/ghostty-org/ghostty/blob/1fa4e787eb1f50729153d09b7f455ebb9fc4ccc9/AI_POLICY.md).
 
 ## Acknowledgments
 
-Quasiquodo builds on the excellent work of the [**SWC**](https://swc.rs) project, whose [parser](https://rustdoc.swc.rs/swc_ecma_parser/) and [AST](https://rustdoc.swc.rs/swc_ecma_ast/) make the whole thing possible, and whose [quasi-quotation macro for JavaScript](https://rustdoc.swc.rs/swc_ecma_quote/) inspired Quasiquodo's design.
+Quasiquodo builds on the excellent [**SWC**](https://swc.rs) project, whose [parser](https://rustdoc.swc.rs/swc_ecma_parser/) and [AST](https://rustdoc.swc.rs/swc_ecma_ast/) make it all possible, and whose [quasi-quotation macro for JavaScript](https://rustdoc.swc.rs/swc_ecma_quote/) inspired Quasiquodo's design.
