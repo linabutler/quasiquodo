@@ -40,7 +40,7 @@ Add Quasiquodo to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-quasiquodo = "0.3"
+quasiquodo = "0.4"
 ```
 
 Quasiquodo uses [SWC](https://swc.rs) to parse TypeScript, and [re-exports its syntax tree types](https://docs.rs/quasiquodo/latest/quasiquodo/ts/swc/index.html). Any SWC crates you use directly—like `swc_ecma_codegen` for code generation—must be added as separate dependencies.
