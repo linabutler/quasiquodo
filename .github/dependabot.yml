@@ -4,10 +4,10 @@
 version: 2
 updates:
   - package-ecosystem: "cargo"
-    directories:
-      - "/"
-      - "/quasiquodo"
-      - "/quasiquodo-ts-core"
-      - "/quasiquodo-ts-macros"
+    directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      swc:
+        patterns:
+          - "swc_*"
