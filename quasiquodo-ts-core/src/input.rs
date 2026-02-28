@@ -1,8 +1,10 @@
 use std::fmt::Display;
 
-use syn::parse::{Parse, ParseStream};
-use syn::punctuated::Punctuated;
-use syn::{Ident, Token};
+use syn::{
+    Ident, Token,
+    parse::{Parse, ParseStream},
+    punctuated::Punctuated,
+};
 
 mod kw {
     syn::custom_keyword!(span);
@@ -14,15 +16,16 @@ mod kw {
 /// The macro understands these forms:
 ///
 /// ```text
-/// "source" as OutputKind, var: Type = expr, vars...
-/// span = expr, "source" as OutputKind, vars...
-/// span, "source" as OutputKind, vars...
-/// comments = expr, "source" as OutputKind, vars...
-/// comments, "source" as OutputKind, vars...
+/// root; "source" as OutputKind, var: Type = expr, vars...
+/// root; span = expr, "source" as OutputKind, vars...
+/// root; span, "source" as OutputKind, vars...
+/// root; comments = expr, "source" as OutputKind, vars...
+/// root; comments, "source" as OutputKind, vars...
 /// ```
 ///
-/// `...vars` parses zero or more [`Variable`]s, declared as
-/// `name: type = value`.
+/// `root` is the resolved crate path (e.g., `::quasiquodo_ts`),
+/// injected by the declarative macro wrapper. `...vars` parses
+/// zero or more [`Variable`]s, declared as `name: type = value`.
 pub struct MacroInput {
     pub root: syn::Path,
     pub span: Option<syn::Expr>,
@@ -34,9 +37,7 @@ pub struct MacroInput {
 
 impl Parse for MacroInput {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
-        // Parse `<root> ;` prefix injected by the declarative
-        // macro wrapper.
-        let root: syn::Path = input.parse()?;
+        let root = input.parse()?;
         input.parse::<Token![;]>()?;
 
         // Parse optional `span` and `comments` arguments, in either order.

@@ -1,6 +1,8 @@
-use std::cell::RefCell;
-use std::collections::{BTreeMap, HashMap};
-use std::fmt::Display;
+use std::{
+    cell::RefCell,
+    collections::{BTreeMap, HashMap},
+    fmt::Display,
+};
 
 use proc_macro2::Span;
 use swc_common::{
@@ -32,7 +34,7 @@ pub(crate) fn context(
                 ));
             }
             Entry::Vacant(entry) => {
-                // Emit `let quote_var_Name: <SwcType> = <value>;`.
+                // Emit `let quote_var_Name = <value>;`.
                 let var_ident = syn::Ident::new(&format!("quote_var_{name}"), Span::mixed_site());
                 bindings.push(parse_quote! {
                     let #var_ident = #value;
@@ -92,7 +94,7 @@ pub(crate) fn jsdoc_comments<'a>(
 
 /// Context for variable substitution during code generation.
 pub(crate) struct Context {
-    /// The resolved root path (e.g., `quasiquodo::ts` or
+    /// The resolved root crate path (e.g., `quasiquodo::ts` or
     /// `quasiquodo_ts`), injected by the declarative macro wrapper.
     root: syn::Path,
     /// The optional `span` argument passed to the macro.

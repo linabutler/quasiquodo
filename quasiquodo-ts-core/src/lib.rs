@@ -1,15 +1,13 @@
+use proc_macro2::Span;
+use quote::ToTokens;
+use swc_common::{FileName, SourceMap, comments::SingleThreadedComments, sync::Lrc};
+use swc_ecma_parser::{Lexer, Parser, StringInput, Syntax, TsSyntax, error::Error as ParserError};
+use syn::parse_quote;
+
 mod context;
 pub mod input;
 mod lexer;
 mod lift;
-
-use proc_macro2::Span;
-use quote::ToTokens;
-use swc_common::comments::SingleThreadedComments;
-use swc_common::sync::Lrc;
-use swc_common::{FileName, SourceMap};
-use swc_ecma_parser::{Lexer, Parser, StringInput, Syntax, TsSyntax, error::Error as ParserError};
-use syn::parse_quote;
 
 use self::{
     context::context,
