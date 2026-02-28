@@ -551,7 +551,7 @@ dependencies = [
 
 [[package]]
 name = "quasiquodo"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "quasiquodo-ts",
  "swc_ecma_codegen",
@@ -559,7 +559,7 @@ dependencies = [
 
 [[package]]
 name = "quasiquodo-ts"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "indoc",
  "num-bigint",
@@ -573,7 +573,7 @@ dependencies = [
 
 [[package]]
 name = "quasiquodo-ts-core"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "heck",
  "num-bigint",
@@ -592,7 +592,7 @@ dependencies = [
 
 [[package]]
 name = "quasiquodo-ts-macros"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "quasiquodo-ts-core",
 ]
