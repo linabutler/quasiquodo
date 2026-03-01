@@ -155,9 +155,11 @@ pub(crate) mod scan {
 
     fn skip_comment<'a>(lex: &mut Lexer<'a, CodeToken<'a>>) {
         let remainder = lex.remainder();
-        let n = if let Some(index) = remainder.find("\r\n") {
-            index + 2
-        } else if let Some(index) = remainder.find(['\r', '\n']) {
+        let n = if let Some(index) = remainder.find('\n') {
+            // This branch catches LF and CRLF endings. Since we
+            // skip comments, the distinction doesn't matter.
+            index + 1
+        } else if let Some(index) = remainder.find('\r') {
             index + 1
         } else {
             remainder.len()
