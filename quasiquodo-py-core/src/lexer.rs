@@ -114,8 +114,7 @@ pub(crate) mod scan {
         Placeholder(&'a str),
 
         /// A `#` line comment.
-        #[regex(r"#[^{\n][^\n]*")]
-        #[token("#")]
+        #[token("#", skip_comment)]
         Comment,
 
         // Two-character prefix; interpolated.
@@ -152,6 +151,18 @@ pub(crate) mod scan {
 
         #[token("}")]
         BraceClose,
+    }
+
+    fn skip_comment<'a>(lex: &mut Lexer<'a, CodeToken<'a>>) {
+        let remainder = lex.remainder();
+        let n = if let Some(index) = remainder.find("\r\n") {
+            index + 2
+        } else if let Some(index) = remainder.find(['\r', '\n']) {
+            index + 1
+        } else {
+            remainder.len()
+        };
+        lex.bump(n);
     }
 
     /// Tokens recognized inside a string literal body.
@@ -558,14 +569,33 @@ mod tests {
     // MARK: Scanner, comments
 
     #[test]
-    fn test_scan_marker_in_comment_ignored() {
+    fn test_scan_comments() {
+        // Placeholder inside a comment is ignored.
         let result: Vec<_> = Scanner::new("x = 1  # #{v}").collect();
         assert_eq!(result.len(), 0);
-    }
 
-    #[test]
-    fn test_scan_marker_after_comment_line() {
+        // Placeholder on the line after a comment is found.
         let result: Vec<_> = Scanner::new("# comment\n#{v}").collect();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].name, "v");
+        assert_eq!(result[0].pos, TokenPosition::Code);
+
+        // Comment at EOF without trailing newline.
+        let result: Vec<_> = Scanner::new("# just a comment").collect();
+        assert_eq!(result.len(), 0);
+
+        // Bare `#` at EOF.
+        let result: Vec<_> = Scanner::new("#").collect();
+        assert_eq!(result.len(), 0);
+
+        // Comment terminated by `\r\n`.
+        let result: Vec<_> = Scanner::new("# comment\r\n#{v}").collect();
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].name, "v");
+        assert_eq!(result[0].pos, TokenPosition::Code);
+
+        // Comment terminated by bare `\r`.
+        let result: Vec<_> = Scanner::new("# comment\r#{v}").collect();
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].name, "v");
         assert_eq!(result[0].pos, TokenPosition::Code);
