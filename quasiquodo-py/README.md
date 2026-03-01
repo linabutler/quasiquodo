@@ -2,7 +2,7 @@
 
 **Compile-time Python quasi-quoting for Rust.**
 
-[<img src="https://img.shields.io/github/v/tag/linabutler/quasiquodo?style=for-the-badge&logo=rust" alt="Latest GitHub tag" height="24">](https://github.com/linabutler/quasiquodo/tree/main/quasiquodo-py)
+[<img src="https://img.shields.io/github/v/release/linabutler/quasiquodo?style=for-the-badge&label=tag&logo=rust" alt="GitHub release tag" height="24">](https://github.com/linabutler/quasiquodo/tree/main/quasiquodo-py)
 [<img src="https://img.shields.io/github/actions/workflow/status/linabutler/quasiquodo/test.yml?style=for-the-badge&logo=github" alt="Build status" height="24">](https://github.com/linabutler/quasiquodo/actions?query=branch%3Amain)
 
 **quasiquodo-py** is a Rust macro that parses Python strings into typed syntax tree nodes at compile time.
@@ -19,6 +19,8 @@ quasiquodo-py = { git = "https://github.com/linabutler/quasiquodo" }
 **quasiquodo-py** uses [Ruff](https://github.com/astral-sh/ruff) to parse Python, and re-exports its syntax tree types.
 
 Ruff isn't published to crates.io, so **quasiquodo-py** must be added as a Git dependency. Any Ruff crates you use directly must be pinned to the same Ruff tag that **quasiquodo-py** uses.
+
+Quasiquodo releases are immutable, so it's safe (and encouraged!) to pin **quasiquodo-py** to a `tag` instead of a `rev`.
 
 ### Minimum supported Rust version
 
