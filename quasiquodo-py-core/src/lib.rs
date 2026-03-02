@@ -66,6 +66,7 @@ fn parse_source(source: String, kind: &OutputKind) -> Result<Box<dyn Lift>, Pars
         OutputKind::Alias => format!("from __x__ import {source}"),
         OutputKind::Expr
         | OutputKind::Stmt
+        | OutputKind::Suite
         | OutputKind::Identifier
         | OutputKind::FunctionDef
         | OutputKind::ClassDef
@@ -95,6 +96,14 @@ fn parse_source(source: String, kind: &OutputKind) -> Result<Box<dyn Lift>, Pars
                 Err(Expected::Statement)?;
             }
             Box::new(body.swap_remove(0))
+        }
+        OutputKind::Suite => {
+            let parsed = parse_module(&input)?;
+            let body = parsed.into_syntax().body;
+            if body.is_empty() {
+                Err(Expected::Statement)?;
+            }
+            Box::new(body)
         }
         OutputKind::FunctionDef => {
             let parsed = parse_module(&input)?;

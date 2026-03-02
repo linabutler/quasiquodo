@@ -817,6 +817,7 @@ dependencies = [
 name = "quasiquodo-py-core"
 version = "0.4.1"
 dependencies = [
+ "indoc",
  "logos",
  "proc-macro2",
  "quote",
@@ -826,6 +827,7 @@ dependencies = [
  "syn",
  "thiserror",
  "unicode-ident",
+ "unindent",
  "winnow",
 ]
 
@@ -1581,6 +1583,12 @@ dependencies = [
  "phf_codegen",
  "rand",
 ]
+
+[[package]]
+name = "unindent"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7264e107f553ccae879d21fbea1d6724ac785e8c3bfc762137959b5802826ef3"
 
 [[package]]
 name = "url"

@@ -53,6 +53,18 @@ let func = py_quote!(
 );
 ```
 
+Source strings enclosed in braces are automatically unindented, letting them match the surrounding indentation level:
+
+```rust
+let func = py_quote!({r#"
+    def greet(name: str) -> str:
+        return f"Hi {name}!"
+
+    def thank(name: str) -> str:
+        return f"Ta, {name}!"
+"#} as Suite);
+```
+
 ### Variable substitution
 
 `#{var}` placeholders splice variables into the syntax tree.
@@ -195,6 +207,7 @@ The output kind tells `py_quote!` which `ruff_python_ast` type to return.
 |-------------|----------|----------------|
 | `Expr` | `Expr` | `"x + 1"` |
 | `Stmt` | `Stmt` | `"return x"` |
+| `Suite` | `Suite` | `"x = 1\ny = 2"` |
 | `Identifier` | `Identifier` | `"my_var"` |
 | `Parameter` | `Parameter` | `"x: int"` |
 | `ParameterWithDefault` | `ParameterWithDefault` | `"x=42"` |
@@ -215,6 +228,7 @@ Variables can be scalar, boxed, or container types.
 |---------------|-----------------|-------------|
 | `Expr` | `Expr` | An expression |
 | `Stmt` | `Stmt` | A statement |
+| `Suite` | `Suite` | A suite of statements, in body position |
 | `Identifier` | `Identifier` | An identifier |
 | `Parameter` | `Parameter` | A function parameter |
 | `ParameterWithDefault` | `ParameterWithDefault` | A parameter with a default value |

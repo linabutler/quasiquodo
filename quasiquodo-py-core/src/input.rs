@@ -5,13 +5,18 @@ use syn::{
     parse::{Parse, ParseStream},
     punctuated::Punctuated,
 };
+use unindent::unindent;
 
 /// Parsed macro input.
 ///
-/// The macro form is:
+/// The macro understands these forms:
 ///
 /// ```text
 /// root; "source" as OutputKind, var: Type = expr, vars...
+///
+/// root; {"
+///     source
+/// "} as OutputKind, var: Type = expr, vars...
 /// ```
 ///
 /// `root` is the resolved crate path (e.g., `::quasiquodo_py`),
@@ -29,7 +34,14 @@ impl Parse for MacroInput {
         let root = input.parse()?;
         input.parse::<Token![;]>()?;
 
-        let source = input.parse()?;
+        let source = if input.peek(syn::token::Brace) {
+            let content;
+            syn::braced!(content in input);
+            let lit: syn::LitStr = content.parse()?;
+            syn::LitStr::new(&unindent(&lit.value()), lit.span())
+        } else {
+            input.parse()?
+        };
         input.parse::<Token![as]>()?;
         let output_kind = input.parse()?;
 
@@ -60,6 +72,11 @@ pub enum OutputKind {
     /// Extracts a [`Stmt`][ruff_python_ast::Stmt] from a module
     /// parsed with [`parse_module`][ruff_python_parser::parse_module].
     Stmt,
+
+    /// Parses a [`Suite`][ruff_python_ast::Suite]
+    /// from a module parsed with
+    /// [`parse_module`][ruff_python_parser::parse_module].
+    Suite,
 
     /// Extracts an [`Identifier`][ruff_python_ast::Identifier] from a
     /// name expression parsed with [`parse_expression`][ruff_python_parser::parse_expression].
@@ -113,6 +130,7 @@ impl Parse for OutputKind {
             "Parameter" => Ok(Self::Parameter),
             "ParameterWithDefault" => Ok(Self::ParameterWithDefault),
             "Stmt" => Ok(Self::Stmt),
+            "Suite" => Ok(Self::Suite),
             other => Err(syn::Error::new(
                 ident.span(),
                 format!(
@@ -120,7 +138,7 @@ impl Parse for OutputKind {
                      `Alias`, `ClassDef`, `Decorator`, `Expr`, \
                      `FunctionDef`, `Identifier`, `ImportFrom`, \
                      `Keyword`, `Parameter`, `ParameterWithDefault`, \
-                     `Stmt`"
+                     `Stmt`, `Suite`"
                 ),
             )),
         }
@@ -169,6 +187,8 @@ pub enum VarType {
     ParameterWithDefault,
     /// Substitutes a `Stmt` in a block statement body.
     Stmt,
+    /// Substitutes a `Suite` in a block statement body.
+    Suite,
     /// Substitutes a string value as a `StringLiteral`.
     Str(StrVarType),
 
@@ -229,6 +249,7 @@ impl Display for VarType {
             Self::Parameter => f.write_str("Parameter"),
             Self::ParameterWithDefault => f.write_str("ParameterWithDefault"),
             Self::Stmt => f.write_str("Stmt"),
+            Self::Suite => f.write_str("Suite"),
             Self::Str(StrVarType::Str) => f.write_str("str"),
             Self::Str(StrVarType::String) => f.write_str("String"),
             Self::Ref(inner) => write!(f, "&{inner}"),
@@ -259,6 +280,7 @@ impl Parse for VarType {
             "Parameter" => Ok(Self::Parameter),
             "ParameterWithDefault" => Ok(Self::ParameterWithDefault),
             "Stmt" => Ok(Self::Stmt),
+            "Suite" => Ok(Self::Suite),
             "str" => Ok(Self::Str(StrVarType::Str)),
             "String" => Ok(Self::Str(StrVarType::String)),
             "u8" => Ok(Self::Num(NumVarType::U8)),
@@ -315,9 +337,9 @@ enum MacroInputError<'a> {
         "unsupported variable type `{0}`; expected one of \
          `Alias`, `bool`, `Decorator`, `Expr`, \
          `f64`, `Identifier`, `Keyword`, `Parameter`, \
-         `ParameterWithDefault`, `Stmt`, `str`, `String`, \
-         `u8`, `u16`, `u32`, `u64`, `&...`, `Box<...>`, \
-         `Option<...>`, `Vec<...>`"
+         `ParameterWithDefault`, `Stmt`, `Suite`, `str`, \
+         `String`, `u8`, `u16`, `u32`, `u64`, `&...`, \
+         `Box<...>`, `Option<...>`, `Vec<...>`"
     )]
     UnsupportedVar(&'a str),
 }
@@ -326,6 +348,7 @@ enum MacroInputError<'a> {
 mod tests {
     use super::*;
 
+    use indoc::indoc;
     use syn::parse_str;
 
     #[test]
@@ -464,5 +487,74 @@ mod tests {
             VarType::Option(ref inner) if matches!(**inner, VarType::Ref(ref inner)
                 if matches!(**inner, VarType::Str(StrVarType::Str)))
         ));
+    }
+
+    #[test]
+    fn test_parse_output_kind_suite() {
+        let input: MacroInput = parse_str(r#"::quasiquodo_py; "x = 1\ny = 2" as Suite"#).unwrap();
+        assert!(matches!(input.output_kind, OutputKind::Suite));
+    }
+
+    #[test]
+    fn test_parse_var_type_suite() {
+        let vt: VarType = parse_str("Suite").unwrap();
+        assert!(matches!(vt, VarType::Suite));
+    }
+
+    // MARK: Braced string syntax
+
+    #[test]
+    fn test_parse_braced_string() {
+        let input: MacroInput = parse_str(
+            r#"::quasiquodo_py; {"
+            x = 1
+            y = 2
+        "} as Suite"#,
+        )
+        .unwrap();
+        assert!(matches!(input.output_kind, OutputKind::Suite));
+        assert_eq!(
+            input.source.value(),
+            indoc! {"
+                x = 1
+                y = 2
+            "},
+        );
+    }
+
+    #[test]
+    fn test_parse_braced_string_preserves_relative_indent() {
+        let input: MacroInput = parse_str(
+            r#"::quasiquodo_py; {"
+            def foo():
+                pass
+        "} as Stmt"#,
+        )
+        .unwrap();
+        assert_eq!(
+            input.source.value(),
+            indoc! {"
+                def foo():
+                    pass
+            "},
+        );
+    }
+
+    #[test]
+    fn test_parse_braced_string_with_variables() {
+        let input: MacroInput = parse_str(
+            r##"::quasiquodo_py; {"
+            #{name}()
+        "} as Expr, name: Identifier = my_name"##,
+        )
+        .unwrap();
+        assert!(matches!(input.output_kind, OutputKind::Expr));
+        assert_eq!(
+            input.source.value(),
+            indoc! {"
+                #{name}()
+            "},
+        );
+        assert_eq!(input.variables.len(), 1);
     }
 }

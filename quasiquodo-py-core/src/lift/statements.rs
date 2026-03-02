@@ -15,11 +15,11 @@ impl Lift for Stmt {
         if let Stmt::Expr(StmtExpr { value, .. }) = self
             && let Expr::Name(name) = &**value
             && let Some(var) = context.stand_in(name.id.as_str())
-            && matches!(var.ty.inner(), VarType::Stmt)
+            && matches!(var.ty.inner(), VarType::Stmt | VarType::Suite)
         {
             let var_ident = &var.ident;
             return Ok(match &var.ty {
-                VarType::Vec(_) | VarType::Option(_) => {
+                VarType::Vec(_) | VarType::Option(_) | VarType::Suite => {
                     CodeFragment::Splice(parse_quote!(#var_ident.iter().cloned()))
                 }
                 _ => {

@@ -18,10 +18,12 @@ syn = { version = "2", features = ["full"] }
 logos = "0.16"
 thiserror = "2"
 unicode-ident = "1"
+unindent = "0.2"
 winnow = "0.7"
 
 [dev-dependencies]
 syn = { version = "2", features = ["extra-traits"] }
+indoc = "2"
 
 [lints]
 workspace = true
