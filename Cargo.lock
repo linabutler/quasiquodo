@@ -808,6 +808,7 @@ dependencies = [
  "quasiquodo-py-macros",
  "ruff_python_ast",
  "ruff_python_codegen",
+ "ruff_python_stdlib",
  "ruff_source_file",
  "ruff_text_size",
 ]
@@ -1024,6 +1025,15 @@ dependencies = [
  "unicode-ident",
  "unicode-normalization",
  "unicode_names2",
+]
+
+[[package]]
+name = "ruff_python_stdlib"
+version = "0.0.0"
+source = "git+https://github.com/astral-sh/ruff?tag=0.15.2#9d18ee9115f9cbb4c21478baa7c1fa2b46e0759c"
+dependencies = [
+ "bitflags",
+ "unicode-ident",
 ]
 
 [[package]]

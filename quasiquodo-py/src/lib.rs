@@ -41,5 +41,6 @@ macro_rules! py_quote {
 
 pub mod ruff {
     pub use ruff_python_ast as python_ast;
+    pub use ruff_python_stdlib as python_stdlib;
     pub use ruff_text_size as text_size;
 }
