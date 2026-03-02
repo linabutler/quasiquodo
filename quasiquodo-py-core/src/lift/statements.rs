@@ -15,20 +15,78 @@ impl Lift for Stmt {
         if let Stmt::Expr(StmtExpr { value, .. }) = self
             && let Expr::Name(name) = &**value
             && let Some(var) = context.stand_in(name.id.as_str())
-            && matches!(var.ty.inner(), VarType::Stmt | VarType::Suite)
         {
             let var_ident = &var.ident;
-            return Ok(match &var.ty {
-                VarType::Vec(_) | VarType::Option(_) | VarType::Suite => {
-                    CodeFragment::Splice(parse_quote!(#var_ident.iter().cloned()))
-                }
-                _ => {
-                    let root = context.root();
-                    CodeFragment::Single(parse_quote!(
+            let root = context.root();
+            match &var.ty {
+                VarType::Stmt => {
+                    return Ok(CodeFragment::Single(parse_quote!(
                         #root::ruff::python_ast::Stmt::from(#var_ident.clone())
-                    ))
+                    )));
                 }
-            });
+                VarType::Suite | VarType::Vec(_) | VarType::Option(_)
+                    if matches!(var.ty.inner(), VarType::Stmt | VarType::Suite) =>
+                {
+                    return Ok(CodeFragment::Splice(
+                        parse_quote!(#var_ident.iter().cloned()),
+                    ));
+                }
+                ty if ty.is_str() => {
+                    return Ok(CodeFragment::Single(parse_quote!(
+                        #root::ruff::python_ast::Stmt::from(
+                            #root::ruff::python_ast::StmtExpr {
+                                node_index: #root::ruff::python_ast::AtomicNodeIndex::NONE,
+                                range: #root::ruff::text_size::TextRange::default(),
+                                value: Box::new(
+                                    #root::ruff::python_ast::Expr::StringLiteral(
+                                        #root::ruff::python_ast::ExprStringLiteral {
+                                            node_index: #root::ruff::python_ast::AtomicNodeIndex::NONE,
+                                            range: #root::ruff::text_size::TextRange::default(),
+                                            value: #root::ruff::python_ast::StringLiteralValue::single(
+                                                #root::ruff::python_ast::StringLiteral {
+                                                    range: #root::ruff::text_size::TextRange::default(),
+                                                    node_index: #root::ruff::python_ast::AtomicNodeIndex::NONE,
+                                                    value: Box::from(#var_ident.clone()),
+                                                    flags: #root::ruff::python_ast::StringLiteralFlags::empty(),
+                                                }
+                                            ),
+                                        }
+                                    )
+                                ),
+                            }
+                        )
+                    )));
+                }
+                VarType::Option(inner) | VarType::Vec(inner) if inner.is_str() => {
+                    return Ok(CodeFragment::Splice(
+                        parse_quote!(#var_ident.iter().map(|text| {
+                            #root::ruff::python_ast::Stmt::from(
+                                #root::ruff::python_ast::StmtExpr {
+                                    node_index: #root::ruff::python_ast::AtomicNodeIndex::NONE,
+                                    range: #root::ruff::text_size::TextRange::default(),
+                                    value: Box::new(
+                                        #root::ruff::python_ast::Expr::StringLiteral(
+                                            #root::ruff::python_ast::ExprStringLiteral {
+                                                node_index: #root::ruff::python_ast::AtomicNodeIndex::NONE,
+                                                range: #root::ruff::text_size::TextRange::default(),
+                                                value: #root::ruff::python_ast::StringLiteralValue::single(
+                                                    #root::ruff::python_ast::StringLiteral {
+                                                        range: #root::ruff::text_size::TextRange::default(),
+                                                        node_index: #root::ruff::python_ast::AtomicNodeIndex::NONE,
+                                                        value: Box::from(&**text),
+                                                        flags: #root::ruff::python_ast::StringLiteralFlags::empty(),
+                                                    }
+                                                ),
+                                            }
+                                        )
+                                    ),
+                                }
+                            )
+                        })),
+                    ));
+                }
+                _ => (),
+            }
         }
 
         lift_variants!(

@@ -196,6 +196,29 @@ fn test_litstr_placeholder_in_regular_string_not_interpolated() {
     assert_eq!(to_code_expr(&expr), "'foo #{v} baz'");
 }
 
+// MARK: Strings in iterable positions
+
+#[test]
+fn test_optional_str_some_in_list() {
+    let item: Option<&str> = Some("hello");
+    let expr: Expr = py_quote!("[1, #{item}]" as Expr, item: Option<&str> = item);
+    assert_eq!(to_code_expr(&expr), "[1, 'hello']");
+}
+
+#[test]
+fn test_optional_str_none_in_list() {
+    let item: Option<&str> = None;
+    let expr: Expr = py_quote!("[1, #{item}]" as Expr, item: Option<&str> = item);
+    assert_eq!(to_code_expr(&expr), "[1]");
+}
+
+#[test]
+fn test_vec_str_in_list() {
+    let items: Vec<&str> = vec!["a", "b"];
+    let expr: Expr = py_quote!("[#{items}]" as Expr, items: Vec<&str> = items);
+    assert_eq!(to_code_expr(&expr), "['a', 'b']");
+}
+
 // MARK: Identifier substitution
 
 #[test]

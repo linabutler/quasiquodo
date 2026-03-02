@@ -45,6 +45,26 @@ impl Lift for Expr {
                         )),
                     ));
                 }
+                VarType::Option(inner) | VarType::Vec(inner) if inner.is_str() => {
+                    return Ok(CodeFragment::Splice(
+                        parse_quote!(#var_ident.iter().map(|text| {
+                            #root::ruff::python_ast::Expr::StringLiteral(
+                                #root::ruff::python_ast::ExprStringLiteral {
+                                    node_index: #root::ruff::python_ast::AtomicNodeIndex::NONE,
+                                    range: #root::ruff::text_size::TextRange::default(),
+                                    value: #root::ruff::python_ast::StringLiteralValue::single(
+                                        #root::ruff::python_ast::StringLiteral {
+                                            range: #root::ruff::text_size::TextRange::default(),
+                                            node_index: #root::ruff::python_ast::AtomicNodeIndex::NONE,
+                                            value: Box::from(&**text),
+                                            flags: #root::ruff::python_ast::StringLiteralFlags::empty(),
+                                        }
+                                    ),
+                                }
+                            )
+                        })),
+                    ));
+                }
                 VarType::Num(NumVarType::F64) => {
                     return Ok(CodeFragment::Single(
                         parse_quote!(#root::ruff::python_ast::Expr::NumberLiteral(

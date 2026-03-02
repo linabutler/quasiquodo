@@ -91,6 +91,52 @@ fn test_class_body_suite_variable() {
     );
 }
 
+// MARK: Optional string in suite position
+
+#[test]
+fn test_suite_with_optional_str_some() {
+    let desc: Option<&str> = Some("A thing.");
+    let suite: Vec<Stmt> = py_quote!({"
+        #{desc}
+        x = 1
+    "} as Suite, desc: Option<&str> = desc);
+    assert_eq!(
+        to_code_suite(&suite),
+        indoc! {"
+            'A thing.'
+            x = 1"
+        },
+    );
+}
+
+#[test]
+fn test_suite_with_optional_str_none() {
+    let desc: Option<&str> = None;
+    let suite: Vec<Stmt> = py_quote!({"
+        #{desc}
+        x = 1
+    "} as Suite, desc: Option<&str> = desc);
+    assert_eq!(to_code_suite(&suite), "x = 1");
+}
+
+#[test]
+fn test_suite_with_optional_string_some() {
+    let desc: Option<String> = Some("A thing.".to_owned());
+    let suite: Vec<Stmt> = py_quote!({"
+        #{desc}
+        x = 1
+    "} as Suite, desc: Option<String> = desc);
+    assert_eq!(
+        to_code_suite(&suite),
+        indoc! {"
+            'A thing.'
+            x = 1"
+        },
+    );
+}
+
+// MARK: Suite with static prefix
+
 #[test]
 fn test_suite_variable_with_static_prefix() {
     let extra: Vec<Stmt> = vec![py_quote!("return y" as Stmt)];
