@@ -78,7 +78,7 @@ If you find a case where Quasiquodo fails, generates incorrect output, or lacks 
 
 For questions or larger contributions, please [start a discussion](https://github.com/linabutler/quasiquodo/discussions).
 
-Quasiquodo follows [the Ghostty project's AI Usage policy](https://github.com/ghostty-org/ghostty/blob/1fa4e787eb1f50729153d09b7f455ebb9fc4ccc9/AI_POLICY.md).
+We follow the [LLVM AI Tool Use Policy](https://llvm.org/docs/AIToolPolicy.html) for contributions. Please review all AI-generated code and text before opening PRs, issues, or discussions; disclose substantial AI assistance; and be ready to answer questions about your change or request.
 
 ## Acknowledgments
 
