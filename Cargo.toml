@@ -24,7 +24,7 @@ quasiquodo-py-macros = { path = "quasiquodo-py-macros", version = "0.4.1" }
 quasiquodo-ts = { path = "quasiquodo-ts", version = "0.4.1" }
 quasiquodo-ts-core = { path = "quasiquodo-ts-core", version = "0.4.1" }
 quasiquodo-ts-macros = { path = "quasiquodo-ts-macros", version = "0.4.1" }
-swc_atoms = "=9.0.0"
+swc_atoms = "=9.0.3"
 swc_common = "=19.0.0"
 swc_ecma_ast = "=21.0.0"
 swc_ecma_codegen = "=24.0.0"
