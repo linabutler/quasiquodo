@@ -19,7 +19,7 @@ logos = "0.16"
 thiserror = "2"
 unicode-ident = "1"
 unindent = "0.2"
-winnow = "0.7"
+winnow = "1.0"
 
 [dev-dependencies]
 syn = { version = "2", features = ["extra-traits"] }
